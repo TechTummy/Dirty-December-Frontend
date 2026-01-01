@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, Eye, Edit, Ban, CheckCircle, Clock, Plus, Download, X, MapPin, Save } from 'lucide-react';
+import { Search, Filter, Eye, Ban, CheckCircle, Clock, Plus, Download, X, MapPin, Save } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
 
@@ -362,12 +362,6 @@ export function UsersManagement() {
                 >
                   View
                 </button>
-                <button 
-                  onClick={() => handleEditUser(user)}
-                  className="flex-1 text-xs px-3 py-1.5 bg-slate-100 text-gray-700 rounded hover:bg-slate-200 transition-colors font-medium"
-                >
-                  Edit
-                </button>
               </div>
             </div>
           ))}
@@ -437,12 +431,6 @@ export function UsersManagement() {
                         className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleEditUser(user)}
-                        className="p-2 text-gray-600 hover:bg-slate-100 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
                       </button>
                       <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Ban className="w-4 h-4" />
@@ -817,19 +805,10 @@ export function UsersManagement() {
               <button
                 type="button"
                 onClick={() => setViewingUser(null)}
-                className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-xl hover:opacity-90 transition-opacity font-semibold shadow-lg shadow-purple-500/30"
               >
                 Close
               </button>
-              <GradientButton onClick={() => {
-                handleEditUser(viewingUser);
-                setViewingUser(null);
-              }}>
-                <span className="flex items-center gap-2 px-4">
-                  <Edit className="w-4 h-4" />
-                  Edit User
-                </span>
-              </GradientButton>
             </div>
           </div>
         </div>

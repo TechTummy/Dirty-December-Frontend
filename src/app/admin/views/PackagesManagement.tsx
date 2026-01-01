@@ -184,48 +184,21 @@ export function PackagesManagement() {
                 {/* Detailed Benefits */}
                 {viewingPackage.detailedBenefits && viewingPackage.detailedBenefits.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-gray-900 mb-4">Package Contents & Pricing</h3>
+                    <h3 className="font-bold text-gray-900 mb-4">Package Contents</h3>
                     <div className="space-y-2">
                       {viewingPackage.detailedBenefits.map((benefit, index) => (
                         <Card key={index} className="bg-slate-50 border-slate-200">
-                          <div className="mb-3">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900">{benefit.item}</h4>
-                                <p className="text-sm text-gray-600">{benefit.quantity} {benefit.unit}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-emerald-600">₦{benefit.totalRetailPrice.toLocaleString()}</p>
-                                <p className="text-xs text-gray-500">Total retail</p>
-                              </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900">{benefit.item}</h4>
+                              <p className="text-sm text-gray-600">{benefit.quantity} {benefit.unit}</p>
                             </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-200">
-                            <div className="p-2 bg-white rounded-lg">
-                              <p className="text-xs text-gray-500">Retail/{benefit.unit}</p>
-                              <p className="text-sm font-semibold text-gray-900">₦{benefit.retailPricePerUnit.toLocaleString()}</p>
-                            </div>
-                            <div className="p-2 bg-purple-50 rounded-lg">
-                              <p className="text-xs text-purple-700">Savings/{benefit.unit}</p>
-                              <p className="text-sm font-semibold text-purple-700">₦{benefit.savingsPricePerUnit.toLocaleString()}</p>
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/30">
+                              <PackageIcon className="w-5 h-5 text-white" />
                             </div>
                           </div>
                         </Card>
                       ))}
-
-                      {/* Total */}
-                      <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-bold text-gray-900">Total Retail Value</h4>
-                            <p className="text-sm text-gray-600">vs. ₦{viewingPackage.yearlyTotal.toLocaleString()} paid</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-emerald-600">₦{viewingPackage.estimatedRetailValue.toLocaleString()}</p>
-                            <p className="text-sm font-semibold text-purple-600">Save ₦{viewingPackage.savings.toLocaleString()}</p>
-                          </div>
-                        </div>
-                      </Card>
                     </div>
                   </div>
                 )}

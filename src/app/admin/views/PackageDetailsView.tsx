@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, DollarSign, TrendingUp, Calendar, ArrowLeft, Search, Eye, Edit, Ban, CheckCircle, Clock, MapPin, Truck, X, Receipt } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Calendar, ArrowLeft, Search, Eye, Ban, CheckCircle, Clock, MapPin, Truck, X, Receipt } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { packages as allPackages, getPackageById } from '../../data/packages';
 
@@ -436,9 +436,6 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-                <button className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors">
-                  <Edit className="w-4 h-4" />
-                </button>
               </div>
             </div>
           ))}
@@ -519,9 +516,6 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                         className="p-2 hover:bg-purple-50 rounded-lg transition-colors group"
                       >
                         <Eye className="w-4 h-4 text-gray-400 group-hover:text-purple-600" />
-                      </button>
-                      <button className="p-2 hover:bg-emerald-50 rounded-lg transition-colors group">
-                        <Edit className="w-4 h-4 text-gray-400 group-hover:text-emerald-600" />
                       </button>
                       <button className="p-2 hover:bg-red-50 rounded-lg transition-colors group">
                         <Ban className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
