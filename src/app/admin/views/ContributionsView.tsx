@@ -304,8 +304,72 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile: Stacked cards */}
+        <div className="lg:hidden space-y-3 mb-6">
+          {filteredContributions.map((contribution) => (
+            <div key={contribution.id} className="p-4 bg-slate-50 rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">{contribution.userName}</p>
+                  <p className="text-xs text-gray-500">{contribution.userPhone}</p>
+                </div>
+                {getStatusBadge(contribution.status)}
+              </div>
+              
+              <div className="space-y-2 text-xs mb-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Month:</span>
+                  <span className="text-gray-900 font-medium">{contribution.month}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Amount:</span>
+                  <span className="text-gray-900 font-medium">₦{contribution.amount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Payment:</span>
+                  <span className="text-gray-900 font-medium">{contribution.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Reference:</span>
+                  <span className="text-gray-900 font-medium font-mono text-xs">{contribution.reference}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Date:</span>
+                  <span className="text-gray-900 font-medium">{contribution.date}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setSelectedContribution(contribution)}
+                  className="flex-1 text-xs px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium flex items-center justify-center gap-1.5"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  View
+                </button>
+                {contribution.status === 'pending' && (
+                  <>
+                    <button 
+                      onClick={() => handleApprove(contribution.id)}
+                      className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDecline(contribution.id)}
+                      className="px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: Full table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">

@@ -314,9 +314,9 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
       {/* View Contributions Button */}
       {onViewContributions && (
         <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30 flex-shrink-0">
                 <Receipt className="w-7 h-7 text-white" />
               </div>
               <div>
@@ -326,7 +326,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
             </div>
             <button
               onClick={() => onViewContributions(packageId)}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg transition-all active:scale-95 font-semibold flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg transition-all active:scale-95 font-semibold flex items-center justify-center gap-2"
             >
               <Receipt className="w-5 h-5" />
               View Contributions
@@ -376,7 +376,73 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile: Stacked cards */}
+        <div className="lg:hidden space-y-3 mb-6">
+          {filteredUsers.map((user) => (
+            <div key={user.id} className="p-4 bg-slate-50 rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.phone}</p>
+                </div>
+                {getStatusBadge(user.status)}
+              </div>
+              
+              <div className="space-y-2 text-xs mb-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Email:</span>
+                  <span className="text-gray-900 font-medium">{user.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total Paid:</span>
+                  <span className="text-gray-900 font-medium">₦{user.totalPaid.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Progress:</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 h-2 bg-gray-200 rounded-full">
+                      <div
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full"
+                        style={{ width: `${(user.contributions / 12) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-gray-900 font-medium">{user.contributions}/12</span>
+                  </div>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Joined:</span>
+                  <span className="text-gray-900 font-medium">{user.joinedDate}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                {user.deliveryMethod === 'delivery' ? (
+                  <button
+                    onClick={() => setSelectedUserAddress(user)}
+                    className="flex-1 text-xs px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium flex items-center justify-center gap-1.5"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    View Address
+                  </button>
+                ) : (
+                  <div className="flex-1 text-xs px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium flex items-center justify-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    Pickup
+                  </div>
+                )}
+                <button className="px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors">
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors">
+                  <Edit className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: Full table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
