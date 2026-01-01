@@ -39,12 +39,26 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
             <span className="text-sm font-medium">50+ Active Members</span>
           </div>
           
-          <h1 className="text-5xl mb-4 tracking-tight">
+          <h1 className="text-5xl mb-4 tracking-tight relative">
+            {/* Decorative elements around the text */}
+            <span className="absolute -top-6 -left-4 text-2xl animate-bounce" style={{ animationDelay: '0s', animationDuration: '2s' }}>✨</span>
+            <span className="absolute -top-8 left-12 text-xl animate-pulse" style={{ animationDelay: '0.5s' }}>⭐</span>
+            <span className="absolute -top-4 right-8 text-2xl animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.5s' }}>🍗</span>
+            <span className="absolute -top-7 -right-2 text-xl animate-pulse" style={{ animationDelay: '1.5s' }}>✨</span>
+            
+            <span className="absolute top-2 -left-8 text-xl animate-pulse" style={{ animationDelay: '0.3s' }}>🍚</span>
+            <span className="absolute top-4 -right-6 text-xl animate-pulse" style={{ animationDelay: '0.8s' }}>🥘</span>
+            
+            <span className="absolute -bottom-6 left-4 text-2xl animate-bounce" style={{ animationDelay: '0.7s', animationDuration: '2.2s' }}>⭐</span>
+            <span className="absolute -bottom-4 left-20 text-xl animate-pulse" style={{ animationDelay: '1.2s' }}>✨</span>
+            <span className="absolute -bottom-7 right-12 text-2xl animate-bounce" style={{ animationDelay: '0.4s', animationDuration: '2.8s' }}>🍖</span>
+            <span className="absolute -bottom-5 -right-4 text-xl animate-pulse" style={{ animationDelay: '1.8s' }}>⭐</span>
+            
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               Detty December
             </span>
           </h1>
-          <p className="text-xl text-gray-900 mb-3 font-medium">
+          <p className="text-xl text-gray-900 mb-3 font-medium mt-8">
             Smart Savings, Better Value
           </p>
           <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">
