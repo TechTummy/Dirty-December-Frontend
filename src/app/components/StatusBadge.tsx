@@ -1,5 +1,5 @@
 interface StatusBadgeProps {
-  status: 'confirmed' | 'pending' | 'locked' | 'unlocked';
+  status: 'confirmed' | 'pending' | 'locked' | 'unlocked' | 'declined';
   size?: 'sm' | 'md';
 }
 
@@ -16,6 +16,12 @@ export function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
       text: 'text-amber-700',
       border: 'border-amber-200',
       label: 'Pending'
+    },
+    declined: {
+      bg: 'bg-red-50',
+      text: 'text-red-700',
+      border: 'border-red-200',
+      label: 'Declined'
     },
     locked: {
       bg: 'bg-gray-100',

@@ -1,4 +1,4 @@
-import { X, Receipt, Copy, CheckCircle, Clock } from 'lucide-react';
+import { X, Receipt, Copy, CheckCircle, Clock, RotateCcw, XCircle } from 'lucide-react';
 import { Card } from './Card';
 import { StatusBadge } from './StatusBadge';
 import { useState } from 'react';
@@ -18,9 +18,10 @@ interface TransactionDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   transactions: Transaction[];
+  onRetry?: (transaction: Transaction) => void;
 }
 
-export function TransactionDrawer({ isOpen, onClose, transactions }: TransactionDrawerProps) {
+export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: TransactionDrawerProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -89,15 +90,21 @@ export function TransactionDrawer({ isOpen, onClose, transactions }: Transaction
               <Card className={`text-center border-0 ${
                 selectedTransaction.status === 'confirmed' 
                   ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200' 
+                  : selectedTransaction.status === 'declined'
+                  ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
                   : 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
               }`}>
                 <div className={`w-16 h-16 rounded-3xl mx-auto mb-4 flex items-center justify-center ${
                   selectedTransaction.status === 'confirmed'
                     ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
+                    : selectedTransaction.status === 'declined'
+                    ? 'bg-gradient-to-br from-red-500 to-rose-500'
                     : 'bg-gradient-to-br from-amber-500 to-orange-500'
                 }`}>
                   {selectedTransaction.status === 'confirmed' ? (
                     <CheckCircle className="w-8 h-8 text-white" />
+                  ) : selectedTransaction.status === 'declined' ? (
+                    <XCircle className="w-8 h-8 text-white" />
                   ) : (
                     <Clock className="w-8 h-8 text-white" />
                   )}
@@ -155,6 +162,21 @@ export function TransactionDrawer({ isOpen, onClose, transactions }: Transaction
                   <span className="font-semibold text-gray-900">Need help?</span> Contact support with your transaction ID for any inquiries about this payment.
                 </p>
               </Card>
+
+              {/* Try Again Button for Declined Transactions */}
+              {selectedTransaction.status === 'declined' && onRetry && (
+                <button
+                  onClick={() => {
+                    onRetry(selectedTransaction);
+                    setSelectedTransaction(null);
+                    onClose();
+                  }}
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-bold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  Try Again - Resubmit Contribution
+                </button>
+              )}
             </div>
           ) : (
             // Transaction List View
@@ -171,6 +193,8 @@ export function TransactionDrawer({ isOpen, onClose, transactions }: Transaction
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-md ${
                           transaction.status === 'confirmed'
                             ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-emerald-500/30'
+                            : transaction.status === 'declined'
+                            ? 'bg-gradient-to-br from-red-400 to-rose-500 text-white shadow-red-500/30'
                             : 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-orange-500/30'
                         }`}>
                           {transaction.month.substring(0, 3).toUpperCase()}

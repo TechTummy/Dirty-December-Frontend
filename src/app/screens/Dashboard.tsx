@@ -438,6 +438,10 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
         isOpen={showTransactionDrawer}
         onClose={() => setShowTransactionDrawer(false)}
         transactions={contributionHistory}
+        onRetry={(transaction) => {
+          // Navigate to contribute screen to resubmit the contribution
+          onNavigate('contribute');
+        }}
       />
 
       {/* Delivery Info Modal */}

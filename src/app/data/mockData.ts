@@ -22,7 +22,7 @@ export const contributionHistory = [
   { 
     month: 'March', 
     amount: 5000, 
-    status: 'confirmed', 
+    status: 'declined', 
     date: '2024-03-15',
     transactionId: 'DD-2024-MAR-002103',
     paymentMethod: 'USSD',
