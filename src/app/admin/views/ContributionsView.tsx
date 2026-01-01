@@ -459,9 +459,9 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
             onClick={() => setSelectedContribution(null)}
           ></div>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[85vh] flex flex-col">
               {/* Modal Header */}
-              <div className={`bg-gradient-to-br ${packageData.gradient} px-6 py-6 text-white`}>
+              <div className={`bg-gradient-to-br ${packageData.gradient} px-6 py-6 text-white flex-shrink-0`}>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xl font-bold">Contribution Details</h2>
                   <button
@@ -475,7 +475,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
               </div>
 
               {/* Modal Content */}
-              <div className="px-6 py-6 space-y-4">
+              <div className="px-6 py-6 space-y-4 overflow-y-auto flex-1">
                 <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl">
                   <User className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">

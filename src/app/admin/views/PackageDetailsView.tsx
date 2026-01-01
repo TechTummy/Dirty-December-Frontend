@@ -14,6 +14,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDelivery, setFilterDelivery] = useState('all');
   const [selectedUserAddress, setSelectedUserAddress] = useState<any | null>(null);
+  const [viewingUser, setViewingUser] = useState<any | null>(null);
 
   // Get the specific package
   const packageData = getPackageById(packageId);
@@ -430,7 +431,9 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                     Pickup
                   </div>
                 )}
-                <button className="px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors">
+                <button className="px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+                  onClick={() => setViewingUser(user)}
+                >
                   <Eye className="w-4 h-4" />
                 </button>
                 <button className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors">
@@ -511,7 +514,10 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
-                      <button className="p-2 hover:bg-purple-50 rounded-lg transition-colors group">
+                      <button 
+                        onClick={() => setViewingUser(user)}
+                        className="p-2 hover:bg-purple-50 rounded-lg transition-colors group"
+                      >
                         <Eye className="w-4 h-4 text-gray-400 group-hover:text-purple-600" />
                       </button>
                       <button className="p-2 hover:bg-emerald-50 rounded-lg transition-colors group">
@@ -629,6 +635,170 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
             </div>
           </div>
         </>
+      )}
+
+      {/* View User Modal */}
+      {viewingUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${packageData.gradient} flex items-center justify-center shadow-lg ${packageData.shadowColor}`}>
+                  <span className="text-white text-xl font-bold">{viewingUser.name.split(' ').map((n: string) => n[0]).join('')}</span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{viewingUser.name}</h2>
+                  <p className="text-sm text-gray-500 mt-1">{viewingUser.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingUser(null)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 max-h-[calc(100vh-16rem)] overflow-y-auto">
+              <div className="space-y-6">
+                {/* Contact Information */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${packageData.gradient} flex items-center justify-center`}>
+                      <span className="text-white text-sm">👤</span>
+                    </div>
+                    Contact Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-gray-500 mb-1">Phone Number</p>
+                      <p className="font-semibold text-gray-900">{viewingUser.phone}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-gray-500 mb-1">Email Address</p>
+                      <p className="font-semibold text-gray-900">{viewingUser.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Details */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                      <span className="text-white text-sm">⚙️</span>
+                    </div>
+                    Account Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-gray-500 mb-1">Package</p>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${packageData.gradient} text-white`}>
+                        {viewingUser.package}
+                      </span>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-gray-500 mb-1">Status</p>
+                      {getStatusBadge(viewingUser.status)}
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-gray-500 mb-1">Joined Date</p>
+                      <p className="font-semibold text-gray-900">{viewingUser.joinedDate}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contribution Stats */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <span className="text-white text-sm">💰</span>
+                    </div>
+                    Contribution Statistics
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                      <p className="text-xs text-purple-700 mb-1">Contributions Made</p>
+                      <p className="text-2xl font-bold text-purple-900">{viewingUser.contributions}/12</p>
+                      <div className="mt-2 w-full h-2 bg-purple-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+                          style={{ width: `${(viewingUser.contributions / 12) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                      <p className="text-xs text-emerald-700 mb-1">Total Paid</p>
+                      <p className="text-2xl font-bold text-emerald-900">₦{viewingUser.totalPaid.toLocaleString()}</p>
+                      <p className="text-xs text-emerald-600 mt-1">of ₦{packageData.yearlyTotal.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delivery Information */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-white" />
+                    </div>
+                    Delivery Information
+                  </h3>
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-xs text-amber-700 mb-2">Delivery Method</p>
+                    <p className="font-semibold text-gray-900 mb-4">
+                      {viewingUser.deliveryMethod === 'delivery' ? 'Home Delivery' : 'Pickup at Collection Point'}
+                    </p>
+                    {viewingUser.deliveryMethod === 'delivery' && viewingUser.deliveryAddress && (
+                      <>
+                        <div className="space-y-3 mt-4">
+                          <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                            <MapPin className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs font-medium text-amber-700 mb-1">Street Address</p>
+                              <p className="text-sm text-gray-700">{viewingUser.deliveryAddress.address}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-white rounded-lg">
+                              <p className="text-xs font-medium text-amber-700 mb-1">City</p>
+                              <p className="text-sm font-semibold text-gray-900">{viewingUser.deliveryAddress.city}</p>
+                            </div>
+                            <div className="p-3 bg-white rounded-lg">
+                              <p className="text-xs font-medium text-amber-700 mb-1">State</p>
+                              <p className="text-sm font-semibold text-gray-900">{viewingUser.deliveryAddress.state}</p>
+                            </div>
+                          </div>
+                          {viewingUser.deliveryAddress.landmark && (
+                            <div className="p-3 bg-white rounded-lg">
+                              <p className="text-xs font-medium text-amber-700 mb-1">Landmark</p>
+                              <p className="text-sm text-gray-700">{viewingUser.deliveryAddress.landmark}</p>
+                            </div>
+                          )}
+                          <div className="p-3 bg-white rounded-lg">
+                            <p className="text-xs font-medium text-amber-700 mb-1">Contact Phone</p>
+                            <p className="text-sm font-semibold text-gray-900">{viewingUser.deliveryAddress.phoneNumber}</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setViewingUser(null)}
+                className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
