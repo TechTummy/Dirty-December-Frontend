@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, ExternalLink } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { X, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { partners, Partner } from '../data/partners';
 import { Card } from './Card';
 
@@ -9,6 +9,17 @@ interface PartnersProps {
 
 export function Partners({ variant = 'full' }: PartnersProps) {
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 300;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   if (variant === 'compact') {
     return (
@@ -38,26 +49,45 @@ export function Partners({ variant = 'full' }: PartnersProps) {
         <p className="text-sm text-gray-600">Trusted brands making bulk savings possible</p>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6">
+      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6" ref={scrollContainerRef}>
         {partners.map((partner) => (
           <button
             key={partner.id}
             onClick={() => setSelectedPartner(partner)}
             className="flex-shrink-0 group active:scale-95 transition-transform"
           >
-            <div className="w-28 bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-gray-100">
+            <div className="w-32 h-40 bg-gradient-to-br from-white to-slate-50 rounded-3xl border border-slate-200 p-4 shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center">
+              <div className="w-16 h-16 mb-3 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center border border-purple-100 shadow-sm">
                 <span className="text-4xl">{partner.logo}</span>
               </div>
-              <p className="text-xs font-semibold text-gray-900 text-center leading-tight">
+              <p className="text-xs font-bold text-gray-900 text-center leading-tight line-clamp-2 mb-1">
                 {partner.name}
               </p>
-              <p className="text-[10px] text-gray-500 text-center mt-1 font-medium">
+              <p className="text-[10px] text-gray-500 text-center font-medium uppercase tracking-wide">
                 {partner.category}
               </p>
             </div>
           </button>
         ))}
+      </div>
+
+      {/* Navigation Arrows - Desktop only, below the carousel */}
+      <div className="hidden md:flex items-center justify-center gap-3 mt-2">
+        <button
+          onClick={() => scroll('left')}
+          className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+          aria-label="Previous partners"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-700" />
+        </button>
+        
+        <button
+          onClick={() => scroll('right')}
+          className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+          aria-label="Next partners"
+        >
+          <ChevronRight className="w-5 h-5 text-gray-700" />
+        </button>
       </div>
 
       {/* Partner Modal */}

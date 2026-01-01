@@ -188,7 +188,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
             <div className="flex-1 pt-1">
               <h3 className="font-semibold text-gray-900 mb-1">Flexible Payments</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Pay ₦5,000 monthly via simple bank transfer, no hassle
+                Choose your plan and pay monthly via simple bank transfer
               </p>
             </div>
           </Card>
