@@ -1,4 +1,4 @@
-import { TrendingUp, Shield, Clock, ArrowRight, Check, Star, X } from 'lucide-react';
+import { TrendingUp, Shield, Clock, ArrowRight, Check, Star, X, Sparkles, Gift, Heart, Zap } from 'lucide-react';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { Partners } from '../components/Partners';
@@ -41,18 +41,18 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           
           <h1 className="text-5xl mb-4 tracking-tight relative px-12">
             {/* Decorative elements around the text */}
-            <span className="absolute -top-6 left-2 text-2xl animate-bounce" style={{ animationDelay: '0s', animationDuration: '2s' }}>✨</span>
-            <span className="absolute -top-8 left-12 text-xl animate-pulse" style={{ animationDelay: '0.5s' }}>⭐</span>
-            <span className="absolute -top-4 right-8 text-2xl animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.5s' }}>🍗</span>
-            <span className="absolute -top-7 right-4 text-xl animate-pulse" style={{ animationDelay: '1.5s' }}>✨</span>
+            <Sparkles className="absolute -top-6 left-2 w-6 h-6 text-yellow-400 animate-bounce" style={{ animationDelay: '0s', animationDuration: '2s' }} />
+            <Star className="absolute -top-8 left-12 w-5 h-5 text-purple-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
+            <Gift className="absolute -top-4 right-8 w-6 h-6 text-pink-400 animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.5s' }} />
+            <Sparkles className="absolute -top-7 right-4 w-5 h-5 text-indigo-400 animate-pulse" style={{ animationDelay: '1.5s' }} />
             
-            <span className="absolute top-2 left-0 text-xl animate-pulse" style={{ animationDelay: '0.3s' }}>🍚</span>
-            <span className="absolute top-4 right-2 text-xl animate-pulse" style={{ animationDelay: '0.8s' }}>🥘</span>
+            <Heart className="absolute top-2 left-0 w-5 h-5 text-rose-400 animate-pulse" style={{ animationDelay: '0.3s' }} />
+            <Zap className="absolute top-4 right-2 w-5 h-5 text-amber-400 animate-pulse" style={{ animationDelay: '0.8s' }} />
             
-            <span className="absolute -bottom-6 left-4 text-2xl animate-bounce" style={{ animationDelay: '0.7s', animationDuration: '2.2s' }}>⭐</span>
-            <span className="absolute -bottom-4 left-20 text-xl animate-pulse" style={{ animationDelay: '1.2s' }}>✨</span>
-            <span className="absolute -bottom-7 right-12 text-2xl animate-bounce" style={{ animationDelay: '0.4s', animationDuration: '2.8s' }}>🍖</span>
-            <span className="absolute -bottom-5 right-2 text-xl animate-pulse" style={{ animationDelay: '1.8s' }}>⭐</span>
+            <Star className="absolute -bottom-6 left-4 w-6 h-6 text-purple-400 animate-bounce" style={{ animationDelay: '0.7s', animationDuration: '2.2s' }} />
+            <Sparkles className="absolute -bottom-4 left-20 w-5 h-5 text-yellow-400 animate-pulse" style={{ animationDelay: '1.2s' }} />
+            <Gift className="absolute -bottom-7 right-12 w-6 h-6 text-pink-400 animate-bounce" style={{ animationDelay: '0.4s', animationDuration: '2.8s' }} />
+            <Star className="absolute -bottom-5 right-2 w-5 h-5 text-indigo-400 animate-pulse" style={{ animationDelay: '1.8s' }} />
             
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               Detty December
