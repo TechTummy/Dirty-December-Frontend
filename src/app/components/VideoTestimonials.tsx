@@ -1,6 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Slider from 'react-slick';
-import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 interface VideoTestimonial {
   id: number;
@@ -37,6 +37,9 @@ const videoTestimonials: VideoTestimonial[] = [
 
 export function VideoTestimonials() {
   const sliderRef = useRef<Slider>(null);
+  const [playingVideo, setPlayingVideo] = useState<number | null>(null);
+  const [muted, setMuted] = useState(false);
+  const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
 
   const settings = {
     dots: false,
@@ -48,6 +51,15 @@ export function VideoTestimonials() {
     arrows: false,
     centerMode: true,
     centerPadding: '40px',
+    beforeChange: () => {
+      // Pause all videos when changing slides
+      Object.values(videoRefs.current).forEach(video => {
+        if (video) {
+          video.pause();
+        }
+      });
+      setPlayingVideo(null);
+    },
     responsive: [
       {
         breakpoint: 768,
@@ -56,6 +68,40 @@ export function VideoTestimonials() {
         }
       }
     ]
+  };
+
+  const handlePlayVideo = (id: number) => {
+    const video = videoRefs.current[id];
+    if (video) {
+      setPlayingVideo(id); // Set state immediately for UI feedback
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // Ignore AbortError - it's expected when user quickly changes slides
+          if (error.name !== 'AbortError') {
+            console.error('Error playing video:', error);
+            setPlayingVideo(null); // Reset state if video fails to play
+          }
+        });
+      }
+    }
+  };
+
+  const handlePauseVideo = (id: number) => {
+    const video = videoRefs.current[id];
+    if (video) {
+      video.pause();
+      setPlayingVideo(null);
+    }
+  };
+
+  const toggleMute = () => {
+    setMuted(!muted);
+    Object.values(videoRefs.current).forEach(video => {
+      if (video) {
+        video.muted = !muted;
+      }
+    });
   };
 
   return (
@@ -73,22 +119,69 @@ export function VideoTestimonials() {
               <div className="relative mx-auto" style={{ maxWidth: '280px' }}>
                 {/* Portrait Video Container */}
                 <div className="relative aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900">
-                  {/* Thumbnail with Play Button Overlay */}
-                  <img 
-                    src={testimonial.thumbnail}
-                    alt={testimonial.name}
-                    className="w-full h-full object-cover"
-                  />
                   
-                  {/* Play Button Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer">
-                    <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl hover:scale-110 transition-transform">
-                      <Play className="w-8 h-8 text-purple-600 ml-1" fill="currentColor" />
+                  {/* Video Element */}
+                  <video
+                    ref={(el) => { videoRefs.current[testimonial.id] = el; }}
+                    className="w-full h-full object-cover"
+                    poster={testimonial.thumbnail}
+                    playsInline
+                    muted={muted}
+                    onEnded={() => setPlayingVideo(null)}
+                    onClick={() => {
+                      if (playingVideo === testimonial.id) {
+                        handlePauseVideo(testimonial.id);
+                      } else {
+                        handlePlayVideo(testimonial.id);
+                      }
+                    }}
+                  >
+                    <source src={testimonial.videoUrl} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                  
+                  {/* Play/Pause Button Overlay - Only show when not playing */}
+                  {playingVideo !== testimonial.id && (
+                    <div 
+                      className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer"
+                      onClick={() => handlePlayVideo(testimonial.id)}
+                    >
+                      <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl hover:scale-110 transition-transform">
+                        <Play className="w-8 h-8 text-purple-600 ml-1" fill="currentColor" />
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Video Controls - Show when playing */}
+                  {playingVideo === testimonial.id && (
+                    <div className="absolute top-4 right-4 z-10 flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMute();
+                        }}
+                        className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center hover:bg-black/70 transition-colors"
+                      >
+                        {muted ? (
+                          <VolumeX className="w-5 h-5 text-white" />
+                        ) : (
+                          <Volume2 className="w-5 h-5 text-white" />
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePauseVideo(testimonial.id);
+                        }}
+                        className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center hover:bg-black/70 transition-colors"
+                      >
+                        <Pause className="w-5 h-5 text-white" />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Gradient Overlay at Bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pointer-events-none">
                     <p className="text-white font-bold mb-1">{testimonial.name}</p>
                     <p className="text-white/80 text-sm">{testimonial.location}</p>
                   </div>
