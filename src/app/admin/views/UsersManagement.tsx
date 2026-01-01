@@ -227,7 +227,10 @@ export function UsersManagement() {
     } else {
       const newUser: User = {
         id: users.length + 1,
-        ...formData
+        ...formData,
+        contributions: 0,
+        totalPaid: 0,
+        joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
       };
       setUsers([...users, newUser]);
     }
@@ -353,10 +356,16 @@ export function UsersManagement() {
                 </div>
               </div>
               <div className="flex gap-2 mt-3">
-                <button className="flex-1 text-xs px-3 py-1.5 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition-colors font-medium">
+                <button 
+                  onClick={() => handleViewUser(user)}
+                  className="flex-1 text-xs px-3 py-1.5 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition-colors font-medium"
+                >
                   View
                 </button>
-                <button className="flex-1 text-xs px-3 py-1.5 bg-slate-100 text-gray-700 rounded hover:bg-slate-200 transition-colors font-medium">
+                <button 
+                  onClick={() => handleEditUser(user)}
+                  className="flex-1 text-xs px-3 py-1.5 bg-slate-100 text-gray-700 rounded hover:bg-slate-200 transition-colors font-medium"
+                >
                   Edit
                 </button>
               </div>
