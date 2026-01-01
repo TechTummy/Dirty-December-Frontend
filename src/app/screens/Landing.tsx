@@ -39,20 +39,20 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
             <span className="text-sm font-medium">50+ Active Members</span>
           </div>
           
-          <h1 className="text-5xl mb-4 tracking-tight relative">
+          <h1 className="text-5xl mb-4 tracking-tight relative px-12">
             {/* Decorative elements around the text */}
-            <span className="absolute -top-6 -left-4 text-2xl animate-bounce" style={{ animationDelay: '0s', animationDuration: '2s' }}>✨</span>
+            <span className="absolute -top-6 left-2 text-2xl animate-bounce" style={{ animationDelay: '0s', animationDuration: '2s' }}>✨</span>
             <span className="absolute -top-8 left-12 text-xl animate-pulse" style={{ animationDelay: '0.5s' }}>⭐</span>
             <span className="absolute -top-4 right-8 text-2xl animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.5s' }}>🍗</span>
-            <span className="absolute -top-7 -right-2 text-xl animate-pulse" style={{ animationDelay: '1.5s' }}>✨</span>
+            <span className="absolute -top-7 right-4 text-xl animate-pulse" style={{ animationDelay: '1.5s' }}>✨</span>
             
-            <span className="absolute top-2 -left-8 text-xl animate-pulse" style={{ animationDelay: '0.3s' }}>🍚</span>
-            <span className="absolute top-4 -right-6 text-xl animate-pulse" style={{ animationDelay: '0.8s' }}>🥘</span>
+            <span className="absolute top-2 left-0 text-xl animate-pulse" style={{ animationDelay: '0.3s' }}>🍚</span>
+            <span className="absolute top-4 right-2 text-xl animate-pulse" style={{ animationDelay: '0.8s' }}>🥘</span>
             
             <span className="absolute -bottom-6 left-4 text-2xl animate-bounce" style={{ animationDelay: '0.7s', animationDuration: '2.2s' }}>⭐</span>
             <span className="absolute -bottom-4 left-20 text-xl animate-pulse" style={{ animationDelay: '1.2s' }}>✨</span>
             <span className="absolute -bottom-7 right-12 text-2xl animate-bounce" style={{ animationDelay: '0.4s', animationDuration: '2.8s' }}>🍖</span>
-            <span className="absolute -bottom-5 -right-4 text-xl animate-pulse" style={{ animationDelay: '1.8s' }}>⭐</span>
+            <span className="absolute -bottom-5 right-2 text-xl animate-pulse" style={{ animationDelay: '1.8s' }}>⭐</span>
             
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               Detty December
@@ -72,7 +72,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
         </div>
 
         {/* Packages Section */}
-        <div className="mb-8">
+        <div className="mb-8 -mt-6">
           <h2 className="text-center font-bold text-gray-900 mb-2">Choose Your Package</h2>
           <p className="text-center text-sm text-gray-600 mb-6">Select the bundle that fits your needs</p>
           
