@@ -10,8 +10,10 @@ import { contributionHistory } from '../data/mockData';
 import { packages, getPackageById } from '../data/packages';
 import { useState } from 'react';
 
+type Screen = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard';
+
 interface DashboardProps {
-  onNavigate: (screen: string) => void;
+  onNavigate: (screen: Screen) => void;
   userName: string;
   onLogout: () => void;
   userStatus?: 'active' | 'reserved';
