@@ -1,0 +1,569 @@
+import { useState } from 'react';
+import { Users, DollarSign, TrendingUp, Calendar, ArrowLeft, Search, Eye, Edit, Ban, CheckCircle, Clock, MapPin, Truck, X, Receipt } from 'lucide-react';
+import { Card } from '../../components/Card';
+import { packages as allPackages, getPackageById } from '../../data/packages';
+
+interface PackageDetailsViewProps {
+  packageId: string;
+  onBack: () => void;
+  onViewContributions?: (packageId: string) => void;
+}
+
+export function PackageDetailsView({ packageId, onBack, onViewContributions }: PackageDetailsViewProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterDelivery, setFilterDelivery] = useState('all');
+  const [selectedUserAddress, setSelectedUserAddress] = useState<any | null>(null);
+
+  // Get the specific package
+  const packageData = getPackageById(packageId);
+
+  if (!packageData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Package not found</p>
+      </div>
+    );
+  }
+
+  // Mock users data for this package
+  const allUsers = [
+    {
+      id: 1,
+      name: 'Chioma Adebayo',
+      phone: '080 1234 5678',
+      email: 'chioma@email.com',
+      package: 'Family Bundle',
+      status: 'active',
+      contributions: 4,
+      totalPaid: 60000,
+      joinedDate: 'Jan 2024',
+      deliveryMethod: 'delivery',
+      deliveryAddress: {
+        address: '123 Main Street, Ikeja',
+        city: 'Lagos',
+        state: 'Lagos',
+        landmark: 'Near Ikeja Mall',
+        phoneNumber: '080 1234 5678'
+      }
+    },
+    {
+      id: 2,
+      name: 'Emeka Johnson',
+      phone: '081 2345 6789',
+      email: 'emeka@email.com',
+      package: 'Basic Bundle',
+      status: 'active',
+      contributions: 4,
+      totalPaid: 20000,
+      joinedDate: 'Jan 2024',
+      deliveryMethod: 'pickup',
+      deliveryAddress: null
+    },
+    {
+      id: 3,
+      name: 'Blessing Okeke',
+      phone: '090 3456 7890',
+      email: 'blessing@email.com',
+      package: 'Premium Bundle',
+      status: 'active',
+      contributions: 3,
+      totalPaid: 150000,
+      joinedDate: 'Feb 2024',
+      deliveryMethod: 'delivery',
+      deliveryAddress: {
+        address: '456 Victoria Island Road',
+        city: 'Lagos',
+        state: 'Lagos',
+        landmark: 'Opposite Eko Hotel',
+        phoneNumber: '090 3456 7890'
+      }
+    },
+    {
+      id: 4,
+      name: 'Tunde Williams',
+      phone: '070 4567 8901',
+      email: 'tunde@email.com',
+      package: 'Family Bundle',
+      status: 'reserved',
+      contributions: 2,
+      totalPaid: 30000,
+      joinedDate: 'Mar 2024',
+      deliveryMethod: 'pickup',
+      deliveryAddress: null
+    },
+    {
+      id: 5,
+      name: 'Amaka Okafor',
+      phone: '080 5678 9012',
+      email: 'amaka@email.com',
+      package: 'Basic Bundle',
+      status: 'active',
+      contributions: 4,
+      totalPaid: 20000,
+      joinedDate: 'Jan 2024',
+      deliveryMethod: 'delivery',
+      deliveryAddress: {
+        address: '789 Lekki Phase 1',
+        city: 'Lagos',
+        state: 'Lagos',
+        landmark: 'After Lekki Toll Gate',
+        phoneNumber: '080 5678 9012'
+      }
+    },
+    {
+      id: 6,
+      name: 'Ngozi Eze',
+      phone: '081 6789 0123',
+      email: 'ngozi@email.com',
+      package: 'Premium Bundle',
+      status: 'active',
+      contributions: 4,
+      totalPaid: 200000,
+      joinedDate: 'Jan 2024',
+      deliveryMethod: 'delivery',
+      deliveryAddress: {
+        address: '101 Ikoyi Crescent',
+        city: 'Lagos',
+        state: 'Lagos',
+        landmark: 'Near Ikoyi Club',
+        phoneNumber: '081 6789 0123'
+      }
+    },
+    {
+      id: 7,
+      name: 'Oluwaseun Balogun',
+      phone: '080 7890 1234',
+      email: 'seun@email.com',
+      package: 'Basic Bundle',
+      status: 'active',
+      contributions: 3,
+      totalPaid: 15000,
+      joinedDate: 'Feb 2024',
+      deliveryMethod: 'pickup',
+      deliveryAddress: null
+    },
+    {
+      id: 8,
+      name: 'Funmi Adeyemi',
+      phone: '081 8901 2345',
+      email: 'funmi@email.com',
+      package: 'Family Bundle',
+      status: 'active',
+      contributions: 4,
+      totalPaid: 60000,
+      joinedDate: 'Jan 2024',
+      deliveryMethod: 'delivery',
+      deliveryAddress: {
+        address: '234 Surulere Way',
+        city: 'Lagos',
+        state: 'Lagos',
+        landmark: 'Close to National Stadium',
+        phoneNumber: '081 8901 2345'
+      }
+    },
+    {
+      id: 9,
+      name: 'Chidi Okonkwo',
+      phone: '090 9012 3456',
+      email: 'chidi@email.com',
+      package: 'Premium Bundle',
+      status: 'reserved',
+      contributions: 2,
+      totalPaid: 100000,
+      joinedDate: 'Mar 2024',
+      deliveryMethod: 'pickup',
+      deliveryAddress: null
+    },
+    {
+      id: 10,
+      name: 'Adaobi Nnamdi',
+      phone: '070 0123 4567',
+      email: 'ada@email.com',
+      package: 'Basic Bundle',
+      status: 'active',
+      contributions: 4,
+      totalPaid: 20000,
+      joinedDate: 'Jan 2024',
+      deliveryMethod: 'delivery',
+      deliveryAddress: {
+        address: '567 Yaba Road',
+        city: 'Lagos',
+        state: 'Lagos',
+        landmark: 'Before Unilag Gate',
+        phoneNumber: '070 0123 4567'
+      }
+    }
+  ];
+
+  // Filter users by package
+  const packageUsers = allUsers.filter(user => user.package === packageData.name);
+
+  // Calculate package stats
+  const totalUsers = packageUsers.length;
+  const activeUsers = packageUsers.filter(u => u.status === 'active').length;
+  const totalContributions = packageUsers.reduce((sum, user) => sum + user.totalPaid, 0);
+  const expectedTotal = totalUsers * packageData.yearlyTotal;
+  const avgMonthsContributed = packageUsers.reduce((sum, user) => sum + user.contributions, 0) / totalUsers || 0;
+  const completionRate = (totalContributions / expectedTotal) * 100;
+
+  // Filter logic
+  const filteredUsers = packageUsers.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone.includes(searchTerm) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+    const matchesDelivery = filterDelivery === 'all' || user.deliveryMethod === filterDelivery;
+    return matchesSearch && matchesStatus && matchesDelivery;
+  });
+
+  const getStatusBadge = (status: string) => {
+    if (status === 'active') {
+      return (
+        <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+          <CheckCircle className="w-3 h-3" />
+          Active
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+        <Clock className="w-3 h-3" />
+        Reserved
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        Back to Dashboard
+      </button>
+
+      {/* Package Header */}
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${packageData.gradient} p-8 shadow-xl ${packageData.shadowColor}`}>
+        <div className="relative z-10">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              {packageData.badge && (
+                <div className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white mb-3">
+                  {packageData.badge}
+                </div>
+              )}
+              <h1 className="text-3xl font-bold text-white mb-2">{packageData.name}</h1>
+              <p className="text-white/90 text-lg">₦{packageData.monthlyAmount.toLocaleString()}/month</p>
+            </div>
+          </div>
+          <p className="text-white/80 max-w-2xl">{packageData.description}</p>
+        </div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
+      </div>
+
+      {/* Overview Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-lg">
+          <div className="flex items-start justify-between mb-4">
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${packageData.gradient} flex items-center justify-center shadow-lg ${packageData.shadowColor}`}>
+              <Users className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">{totalUsers}</h3>
+          <p className="text-sm text-gray-500">Total Users</p>
+          <p className="text-xs text-emerald-600 mt-1">{activeUsers} active</p>
+        </Card>
+
+        <Card className="border-0 shadow-lg">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <DollarSign className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{(totalContributions / 1000000).toFixed(1)}M</h3>
+          <p className="text-sm text-gray-500">Total Contributions</p>
+          <p className="text-xs text-gray-600 mt-1">₦{totalContributions.toLocaleString()}</p>
+        </Card>
+
+        <Card className="border-0 shadow-lg">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{(expectedTotal / 1000000).toFixed(1)}M</h3>
+          <p className="text-sm text-gray-500">Expected Total</p>
+          <p className="text-xs text-gray-600 mt-1">At year completion</p>
+        </Card>
+
+        <Card className="border-0 shadow-lg">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Calendar className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">{avgMonthsContributed.toFixed(1)}/12</h3>
+          <p className="text-sm text-gray-500">Avg. Months</p>
+          <p className="text-xs text-gray-600 mt-1">{completionRate.toFixed(0)}% complete</p>
+        </Card>
+      </div>
+
+      {/* View Contributions Button */}
+      {onViewContributions && (
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <Receipt className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 mb-1">Contribution Management</h3>
+                <p className="text-sm text-gray-600">Review and approve incoming contributions</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onViewContributions(packageId)}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg transition-all active:scale-95 font-semibold flex items-center gap-2"
+            >
+              <Receipt className="w-5 h-5" />
+              View Contributions
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Users Table */}
+      <Card className="border-0 shadow-lg">
+        <div className="mb-6">
+          <h2 className="font-bold text-gray-900 text-lg mb-4">Package Members</h2>
+          
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name, phone, or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="reserved">Reserved</option>
+            </select>
+
+            <select
+              value={filterDelivery}
+              onChange={(e) => setFilterDelivery(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="all">All Delivery Methods</option>
+              <option value="delivery">Delivery</option>
+              <option value="pickup">Pickup</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">User</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Contact</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Delivery</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Contributions</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Total Paid</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Joined</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                  <td className="py-4 px-4">
+                    <div>
+                      <p className="font-semibold text-gray-900">{user.name}</p>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm">
+                      <p className="text-gray-600">{user.phone}</p>
+                      <p className="text-gray-500">{user.email}</p>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    {user.deliveryMethod === 'delivery' ? (
+                      <button
+                        onClick={() => setSelectedUserAddress(user)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                      >
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>View Address</span>
+                      </button>
+                    ) : (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>Pickup</span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4">
+                    {getStatusBadge(user.status)}
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 max-w-[100px]">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all"
+                            style={{ width: `${(user.contributions / 12) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">{user.contributions}/12</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <p className="font-semibold text-gray-900">₦{user.totalPaid.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">of ₦{packageData.yearlyTotal.toLocaleString()}</p>
+                  </td>
+                  <td className="py-4 px-4">
+                    <p className="text-sm text-gray-600">{user.joinedDate}</p>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      <button className="p-2 hover:bg-purple-50 rounded-lg transition-colors group">
+                        <Eye className="w-4 h-4 text-gray-400 group-hover:text-purple-600" />
+                      </button>
+                      <button className="p-2 hover:bg-emerald-50 rounded-lg transition-colors group">
+                        <Edit className="w-4 h-4 text-gray-400 group-hover:text-emerald-600" />
+                      </button>
+                      <button className="p-2 hover:bg-red-50 rounded-lg transition-colors group">
+                        <Ban className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No users found</p>
+            </div>
+          )}
+        </div>
+
+        {/* Summary Footer */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{filteredUsers.length}</p>
+              <p className="text-xs text-gray-500">Showing</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{totalUsers}</p>
+              <p className="text-xs text-gray-500">Total Members</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-emerald-700">₦{(totalContributions / 1000000).toFixed(1)}M</p>
+              <p className="text-xs text-gray-500">Collected</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-purple-700">{completionRate.toFixed(0)}%</p>
+              <p className="text-xs text-gray-500">Progress</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Delivery Address Modal */}
+      {selectedUserAddress && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            onClick={() => setSelectedUserAddress(null)}
+          ></div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 px-6 py-6 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-bold">Delivery Address</h2>
+                  <button
+                    onClick={() => setSelectedUserAddress(null)}
+                    className="w-9 h-9 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center border border-white/30 hover:bg-white/30 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+                <p className="text-white/90 text-sm font-medium">{selectedUserAddress.name}</p>
+              </div>
+
+              {/* Modal Content */}
+              <div className="px-6 py-6 space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 mb-1">Street Address</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      {selectedUserAddress.deliveryAddress.address}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-xs font-medium text-gray-500 mb-1">City</p>
+                    <p className="font-semibold text-gray-900">{selectedUserAddress.deliveryAddress.city}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-xs font-medium text-gray-500 mb-1">State</p>
+                    <p className="font-semibold text-gray-900">{selectedUserAddress.deliveryAddress.state}</p>
+                  </div>
+                </div>
+
+                {selectedUserAddress.deliveryAddress.landmark && (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                    <p className="text-xs font-medium text-purple-700 mb-1">Landmark</p>
+                    <p className="text-sm text-gray-700">{selectedUserAddress.deliveryAddress.landmark}</p>
+                  </div>
+                )}
+
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <p className="text-xs font-medium text-emerald-700 mb-1">Contact Phone</p>
+                  <p className="font-semibold text-gray-900">{selectedUserAddress.deliveryAddress.phoneNumber}</p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-slate-50">
+                <button
+                  onClick={() => setSelectedUserAddress(null)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 transition-all text-white font-semibold"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

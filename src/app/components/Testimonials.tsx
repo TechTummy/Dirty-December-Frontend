@@ -1,0 +1,185 @@
+import { useState, useEffect, useRef } from 'react';
+import { Star, Quote } from 'lucide-react';
+import { Card } from './Card';
+
+interface Testimonial {
+  id: number;
+  name: string;
+  year: number;
+  quote: string;
+  savings: string;
+  avatar: string;
+  location: string;
+}
+
+const testimonials: Testimonial[] = [
+  {
+    id: 1,
+    name: "Amaka Okonkwo",
+    year: 2024,
+    quote: "Dirty December saved me ₦32,000 this year! I got everything I needed for the holidays without breaking the bank.",
+    savings: "₦32,000",
+    avatar: "AO",
+    location: "Lagos"
+  },
+  {
+    id: 2,
+    name: "Chidi Nwosu",
+    year: 2023,
+    quote: "Best decision I made! My family was shocked when I brought home premium provisions in December. The bulk buying power is real.",
+    savings: "₦28,500",
+    avatar: "CN",
+    location: "Abuja"
+  },
+  {
+    id: 3,
+    name: "Blessing Adeyemi",
+    year: 2024,
+    quote: "I was skeptical at first, but after seeing my December package, I'm already registered for 2025. Worth every kobo!",
+    savings: "₦30,200",
+    avatar: "BA",
+    location: "Ibadan"
+  },
+  {
+    id: 4,
+    name: "Emeka Johnson",
+    year: 2023,
+    quote: "The community aspect makes it even better. We share tips and celebrate together. It's more than just savings!",
+    savings: "₦25,700",
+    avatar: "EJ",
+    location: "Port Harcourt"
+  },
+  {
+    id: 5,
+    name: "Ngozi Okeke",
+    year: 2024,
+    quote: "I convinced my entire family to join after my first year. Now we all save together and December feels like a blessing!",
+    savings: "₦31,400",
+    avatar: "NO",
+    location: "Enugu"
+  }
+];
+
+const gradients = [
+  'from-purple-500 to-pink-500',
+  'from-indigo-500 to-purple-500',
+  'from-emerald-500 to-teal-500',
+  'from-blue-500 to-cyan-500',
+  'from-pink-500 to-rose-500'
+];
+
+export function Testimonials() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollPosition = container.scrollLeft;
+      const cardWidth = container.offsetWidth;
+      const index = Math.round(scrollPosition / cardWidth);
+      setCurrentIndex(index);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToIndex = (index: number) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const cardWidth = container.offsetWidth;
+    container.scrollTo({
+      left: cardWidth * index,
+      behavior: 'smooth'
+    });
+  };
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Success Stories</h2>
+          <p className="text-sm text-gray-500">Hear from our community</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+        </div>
+      </div>
+
+      {/* Testimonial Carousel */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-6 px-6 pb-4"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {testimonials.map((testimonial, index) => (
+          <div
+            key={testimonial.id}
+            className="flex-shrink-0 w-full snap-center"
+          >
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-gradient-to-br from-white to-slate-50">
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradients[index % gradients.length]} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                  <span className="text-white font-bold text-sm">{testimonial.avatar}</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900">{testimonial.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-gray-500">{testimonial.location}</span>
+                    <span className="text-xs text-gray-300">•</span>
+                    <span className="text-xs font-semibold text-purple-600">{testimonial.year}</span>
+                  </div>
+                </div>
+                <Quote className="w-8 h-8 text-purple-200" />
+              </div>
+
+              <p className="text-gray-700 leading-relaxed mb-4 italic">
+                "{testimonial.quote}"
+              </p>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <span className="text-sm text-gray-500 font-medium">Total Savings</span>
+                <span className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  {testimonial.savings}
+                </span>
+              </div>
+
+              {/* Gradient accent line */}
+              <div className={`h-1 w-16 rounded-full bg-gradient-to-r ${gradients[index % gradients.length]} mt-4`}></div>
+            </Card>
+          </div>
+        ))}
+      </div>
+
+      {/* Dot Indicators */}
+      <div className="flex justify-center gap-2 mt-4">
+        {testimonials.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => scrollToIndex(index)}
+            className={`transition-all duration-300 rounded-full ${
+              currentIndex === index
+                ? 'w-8 h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500'
+                : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
+            }`}
+            aria-label={`Go to testimonial ${index + 1}`}
+          />
+        ))}
+      </div>
+
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+    </div>
+  );
+}
