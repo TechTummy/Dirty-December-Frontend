@@ -17,6 +17,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showLateJoinerModal, setShowLateJoinerModal] = useState(false);
   const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(
@@ -76,7 +78,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   };
 
   const handleProfileSubmit = () => {
-    if (name.trim()) {
+    if (name.trim() && email.trim() && password.length >= 6) {
       onComplete(userChoice === 'reserve' ? 'reserved' : 'active', selectedPackage?.name);
     }
   };
@@ -239,7 +241,33 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                   />
                 </Card>
 
-                <GradientButton onClick={handleProfileSubmit} disabled={!name.trim()}>
+                <Card className="mb-6 border-0 shadow-lg">
+                  <label className="block mb-3 text-sm font-semibold text-gray-900">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
+                  />
+                </Card>
+
+                <Card className="mb-6 border-0 shadow-lg">
+                  <label className="block mb-3 text-sm font-semibold text-gray-900">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
+                  />
+                </Card>
+
+                <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6}>
                   Complete Registration
                 </GradientButton>
               </div>
@@ -355,6 +383,32 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               />
             </Card>
 
+            <Card className="mb-6 border-0 shadow-lg">
+              <label className="block mb-3 text-sm font-semibold text-gray-900">
+                Email Address
+              </label>
+              <input
+                type="email"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
+              />
+            </Card>
+
+            <Card className="mb-6 border-0 shadow-lg">
+              <label className="block mb-3 text-sm font-semibold text-gray-900">
+                Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
+              />
+            </Card>
+
             {userChoice === 'catchup' ? (
               /* Catch-Up Summary */
               <Card className="mb-6 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
@@ -452,7 +506,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </Card>
             )}
 
-            <GradientButton onClick={handleProfileSubmit} disabled={!name.trim()}>
+            <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6}>
               {userChoice === 'catchup' ? 'Continue to Payment' : 'Start Contributing'}
             </GradientButton>
           </div>
