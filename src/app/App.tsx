@@ -10,8 +10,7 @@ import { AdminLogin } from './admin/AdminLogin';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { contributionHistory } from './data/mockData';
 
-import type { Screen } from './types';
-
+type Screen = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard';
 type UserStatus = 'active' | 'reserved';
 
 export default function App() {
@@ -95,7 +94,11 @@ export default function App() {
           )}
           
           {currentScreen === 'onboarding' && (
-            <Onboarding onComplete={handleOnboardingComplete} preSelectedPackageId={preSelectedPackageId} />
+            <Onboarding 
+              onComplete={handleOnboardingComplete} 
+              preSelectedPackageId={preSelectedPackageId}
+              onBack={handleBackToLanding}
+            />
           )}
           
           {currentScreen === 'dashboard' && (
