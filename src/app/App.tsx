@@ -10,7 +10,8 @@ import { AdminLogin } from './admin/AdminLogin';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { contributionHistory } from './data/mockData';
 
-type Screen = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard';
+import type { Screen } from './types';
+
 type UserStatus = 'active' | 'reserved';
 
 export default function App() {
@@ -18,12 +19,16 @@ export default function App() {
   const [userName, setUserName] = useState('Chioma');
   const [userStatus, setUserStatus] = useState<UserStatus>('active');
   const [selectedPackage, setSelectedPackage] = useState<string>('Basic Bundle');
+  const [preSelectedPackageId, setPreSelectedPackageId] = useState<string | null>(null);
 
   const handleNavigate = (screen: Screen) => {
     setCurrentScreen(screen);
   };
 
-  const handleGetStarted = () => {
+  const handleGetStarted = (packageId?: string) => {
+    if (packageId) {
+      setPreSelectedPackageId(packageId);
+    }
     setCurrentScreen('onboarding');
   };
 
@@ -90,7 +95,7 @@ export default function App() {
           )}
           
           {currentScreen === 'onboarding' && (
-            <Onboarding onComplete={handleOnboardingComplete} />
+            <Onboarding onComplete={handleOnboardingComplete} preSelectedPackageId={preSelectedPackageId} />
           )}
           
           {currentScreen === 'dashboard' && (

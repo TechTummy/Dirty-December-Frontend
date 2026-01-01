@@ -8,7 +8,7 @@ import { packages } from '../data/packages';
 import { useState } from 'react';
 
 interface LandingProps {
-  onGetStarted: () => void;
+  onGetStarted: (packageId?: string) => void;
   onSignIn: () => void;
   onAdminAccess?: () => void;
 }
@@ -47,7 +47,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
             Smart Savings, Better Value
           </p>
           <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">
-            Save ₦5,000 monthly and receive bulk-purchased provisions worth significantly more in December
+            Contribute monthly and receive bulk-purchased provisions worth 30%+ more in December
           </p>
         </div>
 
@@ -58,7 +58,11 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           
           <div className="space-y-4">
             {packages.map((pkg) => (
-              <Card key={pkg.id} className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all relative">
+              <Card 
+                key={pkg.id} 
+                className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all relative cursor-pointer active:scale-[0.98]"
+                onClick={() => onGetStarted(pkg.id)}
+              >
                 {pkg.badge && (
                   <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${pkg.gradient} text-white shadow-lg ${pkg.shadowColor}`}>
                     {pkg.badge}
@@ -98,7 +102,10 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
                       ))}
                       {pkg.detailedBenefits.length > 3 && (
                         <button
-                          onClick={() => setSelectedPackageForModal(pkg.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPackageForModal(pkg.id);
+                          }}
                           className="w-full py-2 px-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 hover:border-purple-300 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group mt-3"
                         >
                           <span className="font-semibold text-purple-700 text-sm">View All {pkg.detailedBenefits.length} Items</span>

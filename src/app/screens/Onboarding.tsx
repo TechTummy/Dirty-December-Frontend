@@ -2,22 +2,26 @@ import { useState } from 'react';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { LateJoinerModal } from '../components/LateJoinerModal';
-import { User, CheckCircle, AlertCircle, Check, Sparkles } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Check, Sparkles, ArrowLeft } from 'lucide-react';
 import { getRegistrationStatus, calculateProportionalValue } from '../utils/registrationLogic';
 import { packages, Package } from '../data/packages';
 
 interface OnboardingProps {
   onComplete: (userStatus?: 'active' | 'reserved', selectedPackage?: string) => void;
+  preSelectedPackageId?: string | null;
+  onBack?: () => void;
 }
 
-export function Onboarding({ onComplete }: OnboardingProps) {
+export function Onboarding({ onComplete, preSelectedPackageId, onBack }: OnboardingProps) {
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [showLateJoinerModal, setShowLateJoinerModal] = useState(false);
   const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(
+    preSelectedPackageId ? packages.find(pkg => pkg.id === preSelectedPackageId) || null : null
+  );
   
   const regStatus = getRegistrationStatus();
   const proportionalValue = calculateProportionalValue(regStatus.currentMonth);
@@ -34,7 +38,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       if (regStatus.isMidCycle && !userChoice) {
         setShowLateJoinerModal(true);
       } else {
-        setStep(3); // Go to package selection
+        // If package is already pre-selected, skip to profile
+        if (selectedPackage) {
+          setStep(4);
+        } else {
+          setStep(3); // Go to package selection
+        }
       }
     }
   };
@@ -42,15 +51,23 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const handleCatchUp = () => {
     setUserChoice('catchup');
     setShowLateJoinerModal(false);
-    setStep(3); // Go to package selection
+    // If package is already pre-selected, skip to profile
+    if (selectedPackage) {
+      setStep(4);
+    } else {
+      setStep(3); // Go to package selection
+    }
   };
 
   const handleReserveNextYear = () => {
     setUserChoice('reserve');
     setShowLateJoinerModal(false);
-    // You could redirect to a "reserved" confirmation screen
-    // For now, we'll just continue to profile
-    setStep(3);
+    // If package is already pre-selected, skip to profile
+    if (selectedPackage) {
+      setStep(4);
+    } else {
+      setStep(3);
+    }
   };
 
   const handlePackageSelect = (pkg: Package) => {
@@ -64,9 +81,38 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     }
   };
 
+  const handleBack = () => {
+    if (step === 1) {
+      // Go back to landing
+      onBack?.();
+    } else if (step === 2) {
+      setStep(1);
+    } else if (step === 3) {
+      setStep(2);
+    } else if (step === 4) {
+      // If package was pre-selected, go back to step 2 (OTP)
+      if (preSelectedPackageId) {
+        setStep(2);
+      } else {
+        setStep(3); // Otherwise go back to package selection
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="px-6 pt-12 pb-24">
+        {/* Back Button */}
+        {(step > 1 || onBack) && (
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 active:scale-95 transition-all"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back</span>
+          </button>
+        )}
+
         {/* Progress Indicator */}
         <div className="flex gap-2 mb-12">
           {[1, 2, 3, 4].map((i) => (
