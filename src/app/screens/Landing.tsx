@@ -3,6 +3,7 @@ import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { Partners } from '../components/Partners';
 import { Testimonials } from '../components/Testimonials';
+import { VideoTestimonials } from '../components/VideoTestimonials';
 import { PriceDisclaimer } from '../components/PriceDisclaimer';
 import { packages } from '../data/packages';
 import { useState } from 'react';
@@ -49,6 +50,11 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">
             Contribute monthly and receive bulk-purchased provisions worth 30%+ more in December
           </p>
+        </div>
+
+        {/* Video Testimonials Section */}
+        <div className="-mx-6 px-6 mb-12">
+          <VideoTestimonials />
         </div>
 
         {/* Packages Section */}
