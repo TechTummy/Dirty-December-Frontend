@@ -16,7 +16,7 @@ export function Contribute({ onBack }: ContributeProps) {
   
   const accountNumber = '0123456789';
   const bankName = 'GTBank';
-  const accountName = 'Dirty December Contributions';
+  const accountName = 'Detty December Contributions';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(accountNumber);

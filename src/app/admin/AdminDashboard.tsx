@@ -80,7 +80,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             </div>
             <div>
               <h2 className="font-bold text-gray-900">Admin Portal</h2>
-              <p className="text-xs text-gray-500">Dirty December</p>
+              <p className="text-xs text-gray-500">Detty December</p>
             </div>
           </div>
         </div>
@@ -138,7 +138,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             </div>
             <div>
               <h2 className="font-bold text-gray-900">Admin Portal</h2>
-              <p className="text-xs text-gray-500">Dirty December</p>
+              <p className="text-xs text-gray-500">Detty December</p>
             </div>
           </div>
           <button

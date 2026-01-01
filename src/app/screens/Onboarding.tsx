@@ -222,7 +222,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                   Spot Reserved!
                 </h2>
                 <p className="text-gray-600 leading-relaxed mb-8 max-w-sm mx-auto">
-                  You're all set for Dirty December {new Date().getFullYear() + 1}. 
+                  You're all set for Detty December {new Date().getFullYear() + 1}. 
                   We'll remind you when registration opens in January.
                 </p>
                 

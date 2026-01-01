@@ -28,11 +28,11 @@ export function getRegistrationStatus(): RegistrationStatus {
   
   let message = '';
   if (isRegistrationOpen && currentDay > 1) {
-    message = `Registration for Dirty December ${currentYear} ends on January 31st. Join now!`;
+    message = `Registration for Detty December ${currentYear} ends on January 31st. Join now!`;
   } else if (isMidCycle) {
-    message = `Registration for Dirty December ${currentYear} is closed. Choose an option below:`;
+    message = `Registration for Detty December ${currentYear} is closed. Choose an option below:`;
   } else if (isRegistrationOpen && currentDay === 1) {
-    message = `Welcome to Dirty December ${currentYear}! Registration is now open.`;
+    message = `Welcome to Detty December ${currentYear}! Registration is now open.`;
   }
   
   return {

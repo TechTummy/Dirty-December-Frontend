@@ -32,7 +32,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
             <Shield className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Admin Portal</h1>
-          <p className="text-purple-200">Dirty December Management</p>
+          <p className="text-purple-200">Detty December Management</p>
         </div>
 
         <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur">

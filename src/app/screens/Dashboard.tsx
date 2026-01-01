@@ -108,7 +108,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Your Spot is Secured!</h2>
               <p className="text-gray-600 leading-relaxed">
-                You're all set for Dirty December {nextYear}. We'll notify you when registration opens in January.
+                You're all set for Detty December {nextYear}. We'll notify you when registration opens in January.
               </p>
             </div>
           </Card>

@@ -17,7 +17,7 @@ const testimonials: Testimonial[] = [
     id: 1,
     name: "Amaka Okonkwo",
     year: 2024,
-    quote: "Dirty December saved me ₦32,000 this year! I got everything I needed for the holidays without breaking the bank.",
+    quote: "Detty December saved me ₦32,000 this year! I got everything I needed for the holidays without breaking the bank.",
     savings: "₦32,000",
     avatar: "AO",
     location: "Lagos"

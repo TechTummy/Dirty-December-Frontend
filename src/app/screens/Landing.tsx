@@ -40,7 +40,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           
           <h1 className="text-5xl mb-4 tracking-tight">
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Dirty December
+              Detty December
             </span>
           </h1>
           <p className="text-xl text-gray-900 mb-3 font-medium">

@@ -91,7 +91,7 @@ export function CatchUpPayment({ onBack, onComplete }: CatchUpPaymentProps) {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1 font-medium">Account Name</p>
-              <p className="font-semibold text-gray-900">Dirty December Contributions</p>
+              <p className="font-semibold text-gray-900">Detty December Contributions</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1 font-medium">Account Number</p>
