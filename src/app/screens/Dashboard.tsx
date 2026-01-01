@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, Gift, MessageCircle, Sparkles, Calendar, LogOut, User, Clock, Receipt, MapPin, Truck } from 'lucide-react';
+import { Bell, ChevronRight, Gift, MessageCircle, Sparkles, Calendar, LogOut, User, Clock, Receipt, MapPin, Truck, UserCog } from 'lucide-react';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
@@ -10,7 +10,7 @@ import { contributionHistory } from '../data/mockData';
 import { packages, getPackageById } from '../data/packages';
 import { useState } from 'react';
 
-type Screen = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard';
+type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard' | 'profile';
 
 interface DashboardProps {
   onNavigate: (screen: Screen) => void;
@@ -82,6 +82,16 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
                         <p className="font-semibold text-gray-900">{userName}</p>
                         <p className="text-sm text-slate-500">Reserved Member</p>
                       </div>
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          onNavigate('profile');
+                        }}
+                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-purple-50 transition-colors text-left"
+                      >
+                        <UserCog className="w-5 h-5 text-purple-600" />
+                        <span className="font-medium text-gray-900">My Profile</span>
+                      </button>
                       <button
                         onClick={() => {
                           setShowMenu(false);
@@ -238,6 +248,16 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
                       <p className="font-semibold text-gray-900">{userName}</p>
                       <p className="text-sm text-gray-500">Member</p>
                     </div>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onNavigate('profile');
+                      }}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-purple-50 transition-colors text-left"
+                    >
+                      <UserCog className="w-5 h-5 text-purple-600" />
+                      <span className="font-medium text-gray-900">My Profile</span>
+                    </button>
                     <button
                       onClick={() => {
                         setShowMenu(false);

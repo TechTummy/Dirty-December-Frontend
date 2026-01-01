@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { Landing } from './screens/Landing';
 import { Login } from './screens/Login';
+import { ForgotPassword } from './screens/ForgotPassword';
 import { Onboarding } from './screens/Onboarding';
 import { Dashboard } from './screens/Dashboard';
 import { Contribute } from './screens/Contribute';
 import { ValuePreview } from './screens/ValuePreview';
 import { Announcements } from './screens/Announcements';
+import { Profile } from './screens/Profile';
 import { AdminLogin } from './admin/AdminLogin';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { contributionHistory } from './data/mockData';
 
-type Screen = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard';
+type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard' | 'profile';
 type UserStatus = 'active' | 'reserved';
 
 export default function App() {
@@ -41,6 +43,14 @@ export default function App() {
 
   const handleLogin = () => {
     setCurrentScreen('dashboard');
+  };
+
+  const handleForgotPassword = () => {
+    setCurrentScreen('forgot-password');
+  };
+
+  const handlePasswordReset = () => {
+    setCurrentScreen('login');
   };
 
   const handleAdminLogin = () => {
@@ -90,7 +100,11 @@ export default function App() {
           )}
           
           {currentScreen === 'login' && (
-            <Login onLogin={handleLogin} onBackToLanding={handleBackToLanding} />
+            <Login onLogin={handleLogin} onBackToLanding={handleBackToLanding} onForgotPassword={handleForgotPassword} />
+          )}
+          
+          {currentScreen === 'forgot-password' && (
+            <ForgotPassword onBackToLogin={handleSignIn} onPasswordReset={handlePasswordReset} />
           )}
           
           {currentScreen === 'onboarding' && (
@@ -121,6 +135,15 @@ export default function App() {
           
           {currentScreen === 'announcements' && (
             <Announcements onBack={handleBackToDashboard} />
+          )}
+          
+          {currentScreen === 'profile' && (
+            <Profile 
+              onNavigate={handleNavigate}
+              userName={userName}
+              selectedPackage={selectedPackage}
+              userStatus={userStatus}
+            />
           )}
         </div>
       )}

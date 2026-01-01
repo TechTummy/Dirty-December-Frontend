@@ -6,9 +6,10 @@ import { Card } from '../components/Card';
 interface LoginProps {
   onLogin: () => void;
   onBackToLanding: () => void;
+  onForgotPassword: () => void;
 }
 
-export function Login({ onLogin, onBackToLanding }: LoginProps) {
+export function Login({ onLogin, onBackToLanding, onForgotPassword }: LoginProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -109,6 +110,7 @@ export function Login({ onLogin, onBackToLanding }: LoginProps) {
             {/* Forgot Password Link */}
             <button
               type="button"
+              onClick={onForgotPassword}
               className="text-sm font-medium bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity mt-3"
             >
               Forgot password?
