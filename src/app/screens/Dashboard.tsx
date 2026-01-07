@@ -6,6 +6,7 @@ import { Partners } from '../components/Partners';
 import { Testimonials } from '../components/Testimonials';
 import { TransactionDrawer } from '../components/TransactionDrawer';
 import { DeliveryInfoModal, DeliveryInfo } from '../components/DeliveryInfoModal';
+import { LearnSection } from '../components/LearnSection';
 import { contributionHistory } from '../data/mockData';
 import { packages, getPackageById } from '../data/packages';
 import { useState } from 'react';
@@ -18,9 +19,10 @@ interface DashboardProps {
   onLogout: () => void;
   userStatus?: 'active' | 'reserved';
   selectedPackage?: string;
+  quantity?: number;
 }
 
-export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active', selectedPackage = 'Basic Bundle' }: DashboardProps) {
+export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active', selectedPackage = 'Basic Bundle', quantity = 1 }: DashboardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showTransactionDrawer, setShowTransactionDrawer] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -34,10 +36,10 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
   const progressPercent = (confirmedContributions / 12) * 100;
   const nextYear = new Date().getFullYear() + 1;
   
-  // Calculate package-specific values
-  const expectedTotal = userPackage.monthlyAmount * 12;
-  const currentValue = Math.round((userPackage.estimatedRetailValue / 12) * confirmedContributions);
-  const projectedSavings = userPackage.savings;
+  // Calculate package-specific values (multiplied by quantity)
+  const expectedTotal = userPackage.monthlyAmount * 12 * quantity;
+  const currentValue = Math.round((userPackage.estimatedRetailValue * quantity / 12) * confirmedContributions);
+  const projectedSavings = userPackage.savings * quantity;
 
   const handleSaveDeliveryInfo = (info: DeliveryInfo) => {
     setDeliveryInfo(info);
@@ -279,8 +281,18 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
         <Card className="bg-white/95 backdrop-blur-xl border-0 shadow-2xl shadow-black/10">
           {/* Package Badge */}
           <div className="flex items-center justify-between mb-4">
-            <div className={`px-3 py-1.5 rounded-full bg-gradient-to-r ${userPackage.gradient}`}>
-              <span className="text-xs font-bold text-white">{userPackage.name.toUpperCase()}</span>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`px-3 py-1.5 rounded-full bg-gradient-to-r ${userPackage.gradient} inline-block`}>
+                  <span className="text-xs font-bold text-white">{userPackage.name.toUpperCase()}</span>
+                </div>
+                <div className="px-2.5 py-1 rounded-full bg-purple-100 inline-block">
+                  <span className="text-xs font-bold text-purple-700">{quantity} {quantity === 1 ? 'Slot' : 'Slots'}</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 font-medium">
+                Monthly: ₦{(userPackage.monthlyAmount * quantity).toLocaleString()}
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500">Expected Total</p>
@@ -441,6 +453,9 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
             </button>
           )}
         </Card>
+
+        {/* Learn Section */}
+        <LearnSection />
 
         {/* Testimonials Section - replacing Recent Activity */}
         <Testimonials />

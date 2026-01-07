@@ -10,6 +10,7 @@ import { Announcements } from './screens/Announcements';
 import { Profile } from './screens/Profile';
 import { AdminLogin } from './admin/AdminLogin';
 import { AdminDashboard } from './admin/AdminDashboard';
+import { TermsModal } from './components/TermsModal';
 import { contributionHistory } from './data/mockData';
 
 type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard' | 'profile';
@@ -20,7 +21,10 @@ export default function App() {
   const [userName, setUserName] = useState('Chioma');
   const [userStatus, setUserStatus] = useState<UserStatus>('active');
   const [selectedPackage, setSelectedPackage] = useState<string>('Basic Bundle');
+  const [quantity, setQuantity] = useState<number>(1);
   const [preSelectedPackageId, setPreSelectedPackageId] = useState<string | null>(null);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const handleNavigate = (screen: Screen) => {
     setCurrentScreen(screen);
@@ -65,11 +69,20 @@ export default function App() {
     setCurrentScreen('landing');
   };
 
-  const handleOnboardingComplete = (status: UserStatus = 'active', packageName?: string) => {
+  const handleOnboardingComplete = (status: UserStatus = 'active', packageName?: string, userQuantity?: number) => {
     setUserStatus(status);
     if (packageName) {
       setSelectedPackage(packageName);
     }
+    if (userQuantity) {
+      setQuantity(userQuantity);
+    }
+    
+    // Show terms modal on first login
+    if (!hasAcceptedTerms) {
+      setShowTermsModal(true);
+    }
+    
     setCurrentScreen('dashboard');
   };
 
@@ -79,6 +92,15 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentScreen('landing');
+  };
+
+  const handleAcceptTerms = () => {
+    setHasAcceptedTerms(true);
+    setShowTermsModal(false);
+  };
+
+  const handleDeclineTerms = () => {
+    setShowTermsModal(false);
   };
 
   return (
@@ -122,11 +144,17 @@ export default function App() {
               onLogout={handleLogout}
               userStatus={userStatus}
               selectedPackage={selectedPackage}
+              quantity={quantity}
             />
           )}
           
           {currentScreen === 'contribute' && (
-            <Contribute onBack={handleBackToDashboard} />
+            <Contribute 
+              onBack={handleBackToDashboard} 
+              userPackage={selectedPackage}
+              userQuantity={quantity}
+              userEmail="chioma@email.com"
+            />
           )}
           
           {currentScreen === 'value-preview' && (
@@ -147,6 +175,12 @@ export default function App() {
           )}
         </div>
       )}
+      
+      {/* Terms Modal */}
+      <TermsModal 
+        isOpen={showTermsModal}
+        onAccept={handleAcceptTerms}
+      />
     </>
   );
 }

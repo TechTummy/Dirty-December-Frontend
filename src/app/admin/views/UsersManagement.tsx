@@ -17,6 +17,7 @@ interface User {
   deliveryAddress?: string;
   deliveryState?: string;
   deliveryLga?: string;
+  quantity?: number; // Number of slots the user is paying for
 }
 
 const nigerianStates = [
@@ -44,7 +45,8 @@ export function UsersManagement() {
     deliveryType: 'pickup' as 'pickup' | 'delivery',
     deliveryAddress: '',
     deliveryState: '',
-    deliveryLga: ''
+    deliveryLga: '',
+    quantity: 1
   });
 
   const [users, setUsers] = useState<User[]>([
@@ -61,7 +63,8 @@ export function UsersManagement() {
       deliveryType: 'delivery',
       deliveryAddress: '15 Allen Avenue',
       deliveryState: 'Lagos',
-      deliveryLga: 'Ikeja'
+      deliveryLga: 'Ikeja',
+      quantity: 3 // Contributing for 3 people
     },
     {
       id: 2,
@@ -72,7 +75,8 @@ export function UsersManagement() {
       status: 'active',
       contributions: 4,
       totalPaid: 20000,
-      joinedDate: 'Jan 2024'
+      joinedDate: 'Jan 2024',
+      quantity: 1 // Contributing for 1 person
     },
     {
       id: 3,
@@ -83,7 +87,8 @@ export function UsersManagement() {
       status: 'active',
       contributions: 3,
       totalPaid: 150000,
-      joinedDate: 'Feb 2024'
+      joinedDate: 'Feb 2024',
+      quantity: 1 // Contributing for 1 person
     },
     {
       id: 4,
@@ -94,7 +99,8 @@ export function UsersManagement() {
       status: 'reserved',
       contributions: 2,
       totalPaid: 30000,
-      joinedDate: 'Mar 2024'
+      joinedDate: 'Mar 2024',
+      quantity: 2 // Contributing for 2 people
     },
     {
       id: 5,
@@ -105,7 +111,8 @@ export function UsersManagement() {
       status: 'active',
       contributions: 4,
       totalPaid: 20000,
-      joinedDate: 'Jan 2024'
+      joinedDate: 'Jan 2024',
+      quantity: 1 // Contributing for 1 person
     },
     {
       id: 6,
@@ -116,7 +123,8 @@ export function UsersManagement() {
       status: 'active',
       contributions: 4,
       totalPaid: 200000,
-      joinedDate: 'Jan 2024'
+      joinedDate: 'Jan 2024',
+      quantity: 1 // Contributing for 1 person
     }
   ]);
 
@@ -190,7 +198,8 @@ export function UsersManagement() {
       deliveryType: 'pickup' as 'pickup' | 'delivery',
       deliveryAddress: '',
       deliveryState: '',
-      deliveryLga: ''
+      deliveryLga: '',
+      quantity: 1 // Default quantity
     });
     setEditingUser(null);
     setShowModal(true);
@@ -207,7 +216,8 @@ export function UsersManagement() {
       deliveryType: user.deliveryType || 'pickup' as 'pickup' | 'delivery',
       deliveryAddress: user.deliveryAddress || '',
       deliveryState: user.deliveryState || '',
-      deliveryLga: user.deliveryLga || ''
+      deliveryLga: user.deliveryLga || '',
+      quantity: user.quantity || 1 // Default quantity
     });
     setEditingUser(user);
     setShowModal(true);
@@ -563,7 +573,7 @@ export function UsersManagement() {
                     </div>
                     Account Settings
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">Package</label>
                       <select
@@ -575,6 +585,19 @@ export function UsersManagement() {
                         <option value="Family Bundle">Family Bundle</option>
                         <option value="Premium Bundle">Premium Bundle</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Quantity (Slots)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        placeholder="1"
+                        value={formData.quantity}
+                        onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Number of people they're paying for</p>
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">Status</label>
@@ -728,12 +751,16 @@ export function UsersManagement() {
                     </div>
                     Account Details
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="p-4 bg-slate-50 rounded-xl">
                       <p className="text-xs text-gray-500 mb-1">Package</p>
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPackageBadge(viewingUser.package)}`}>
                         {viewingUser.package}
                       </span>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs text-gray-500 mb-1">Quantity (Slots)</p>
+                      <p className="font-semibold text-gray-900">{viewingUser.quantity || 1} {(viewingUser.quantity || 1) === 1 ? 'person' : 'people'}</p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-xl">
                       <p className="text-xs text-gray-500 mb-1">Status</p>

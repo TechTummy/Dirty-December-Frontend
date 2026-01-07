@@ -1,0 +1,9 @@
+/* 
+ * Fonts are loaded directly in index.html for better performance
+ * and reliability across all environments (dev, production, Netlify, etc.)
+ * 
+ * Font families available:
+ * - Inter (primary body font)
+ * - Plus Jakarta Sans (display/heading font)
+ * - Space Grotesk (monospace/accent font)
+ */
