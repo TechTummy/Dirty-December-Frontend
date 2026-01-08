@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { auth } from '../../lib/api';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { LateJoinerModal } from '../components/LateJoinerModal';
@@ -19,7 +21,9 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [registrationToken, setRegistrationToken] = useState<string | null>(null);
   const [showLateJoinerModal, setShowLateJoinerModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(
     preSelectedPackageId ? packages.find(pkg => pkg.id === preSelectedPackageId) || null : null
@@ -28,24 +32,46 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const regStatus = getRegistrationStatus();
   const proportionalValue = calculateProportionalValue(regStatus.currentMonth);
 
-  const handlePhoneSubmit = () => {
+  const handlePhoneSubmit = async () => {
     if (phone.length >= 10) {
-      setStep(2);
+      setIsLoading(true);
+      try {
+        await auth.sendOtp(phone);
+        toast.success('OTP sent successfully');
+        setStep(2);
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to send OTP');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleOtpSubmit = () => {
+  const handleOtpSubmit = async () => {
     if (otp.length === 6) {
-      // Check if mid-cycle
-      if (regStatus.isMidCycle && !userChoice) {
-        setShowLateJoinerModal(true);
-      } else {
-        // If package is already pre-selected, skip to profile
-        if (selectedPackage) {
-          setStep(4);
+      setIsLoading(true);
+      try {
+        const response = await auth.verifyOtp(phone, otp);
+        toast.success(response.message || 'Phone verified successfully');
+        setRegistrationToken(response.data.registration_token);
+
+        // Check if mid-cycle
+        if (regStatus.isMidCycle && !userChoice) {
+          setShowLateJoinerModal(true);
         } else {
-          setStep(3); // Go to package selection
+          // If package is already pre-selected, skip to profile
+          if (selectedPackage) {
+            setStep(4);
+          } else {
+            setStep(3); // Go to package selection
+          }
         }
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to verify OTP');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -72,17 +98,68 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     }
   };
 
-  const handlePackageSelect = (pkg: Package) => {
-    setSelectedPackage(pkg);
-    setStep(4); // Go to profile
-  };
-
-  const handleProfileSubmit = () => {
-    if (name.trim() && email.trim() && password.length >= 6) {
-      onComplete(userChoice === 'reserve' ? 'reserved' : 'active', selectedPackage?.name);
+  // Handle package selection
+  const handlePackageSelect = async (pkg: Package) => {
+    // Only call API if we have a registration token
+    if (registrationToken) {
+      setIsLoading(true);
+      try {
+        // Map frontend string IDs to backend integer IDs
+        const packageIdMap: Record<string, number> = {
+          'basic': 1,
+          'family': 2,
+          'premium': 3
+        };
+        const packageId = packageIdMap[pkg.id] || 1; // Default to 1 if not found 
+        const response = await auth.selectPackage(registrationToken, packageId);
+        toast.success(response.message || 'Package selected successfully');
+        // Update token if response provides a new one (API response shows it returns one)
+        if (response.data?.registration_token) {
+           setRegistrationToken(response.data.registration_token);
+        }
+        setSelectedPackage(pkg);
+        setStep(4);
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to select package');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+       // Fallback for non-API flow or if token missing (shouldn't happen in normal flow)
+       setSelectedPackage(pkg);
+       setStep(4); 
     }
   };
 
+  const handleProfileSubmit = async () => {
+    if (name.trim() && email.trim() && password.length >= 6) {
+       if (registrationToken) {
+         setIsLoading(true);
+         try {
+           await auth.completeRegistration({
+             registration_token: registrationToken,
+             name,
+             phone, // from state
+             email,
+             password
+           });
+           toast.success('Registration completed successfully!');
+           onComplete(userChoice === 'reserve' ? 'reserved' : 'active', selectedPackage?.name);
+         } catch (error: any) {
+           toast.error(error.response?.data?.message || 'Failed to complete registration');
+           console.error(error);
+         } finally {
+           setIsLoading(false);
+         }
+       } else {
+         // Fallback/Legacy flow
+         onComplete(userChoice === 'reserve' ? 'reserved' : 'active', selectedPackage?.name);
+       }
+    }
+  };
+
+  // Back handler
   const handleBack = () => {
     if (step === 1) {
       // Go back to landing
@@ -170,8 +247,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               />
             </Card>
 
-            <GradientButton onClick={handlePhoneSubmit} disabled={phone.length < 10}>
-              Continue
+            <GradientButton onClick={handlePhoneSubmit} disabled={phone.length < 10 || isLoading}>
+              {isLoading ? 'Sending Code...' : 'Continue'}
             </GradientButton>
           </div>
         )}
@@ -205,8 +282,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </button>
             </Card>
 
-            <GradientButton onClick={handleOtpSubmit} disabled={otp.length !== 6}>
-              Verify
+            <GradientButton onClick={handleOtpSubmit} disabled={otp.length !== 6 || isLoading}>
+              {isLoading ? 'Verifying...' : 'Verify'}
             </GradientButton>
           </div>
         )}
@@ -288,7 +365,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                     <button
                       key={pkg.id}
                       onClick={() => handlePackageSelect(pkg)}
-                      className="w-full text-left active:scale-[0.98] transition-transform"
+                      disabled={isLoading}
+                      className="w-full text-left active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden">
                         {/* Badge */}
@@ -506,8 +584,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </Card>
             )}
 
-            <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6}>
-              {userChoice === 'catchup' ? 'Continue to Payment' : 'Start Contributing'}
+            <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}>
+              {userChoice === 'catchup' ? 'Continue to Payment' : (isLoading ? 'Creating Account...' : 'Start Contributing')}
             </GradientButton>
           </div>
         )}

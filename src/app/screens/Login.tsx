@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { auth } from '../../lib/api';
 import { ArrowLeft, Phone, Lock, Eye, EyeOff } from 'lucide-react';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
@@ -15,15 +17,34 @@ export function Login({ onLogin, onBackToLanding, onForgotPassword }: LoginProps
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      const response = await auth.login({
+        login: phoneNumber,
+        password: password
+      });
+
+      // Show success message
+      toast.success(response.message || 'Login successful');
+
+      // Store token and user data
+      if (response.data?.token) {
+        localStorage.setItem('auth_token', response.data.token);
+      }
+      if (response.data?.user) {
+        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+      }
+
       onLogin();
-    }, 1000);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
