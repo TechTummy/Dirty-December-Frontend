@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Toaster } from 'sonner';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { Landing } from './screens/Landing';
 import { Login } from './screens/Login';
 import { ForgotPassword } from './screens/ForgotPassword';
@@ -10,6 +12,7 @@ import { Announcements } from './screens/Announcements';
 import { Profile } from './screens/Profile';
 import { AdminLogin } from './admin/AdminLogin';
 import { AdminDashboard } from './admin/AdminDashboard';
+import { InstallPWA } from './components/InstallPWA';
 import { TermsModal } from './components/TermsModal';
 import { contributionHistory } from './data/mockData';
 
@@ -17,7 +20,7 @@ type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboar
 type UserStatus = 'active' | 'reserved';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
+  const navigate = useNavigate();
   const [userName, setUserName] = useState('Chioma');
   const [userStatus, setUserStatus] = useState<UserStatus>('active');
   const [selectedPackage, setSelectedPackage] = useState<string>('Basic Bundle');
@@ -27,46 +30,26 @@ export default function App() {
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   const handleNavigate = (screen: Screen) => {
-    setCurrentScreen(screen);
+    switch (screen) {
+      case 'landing':
+        navigate('/');
+        break;
+      case 'admin-login':
+        navigate('/admin/login');
+        break;
+      case 'admin-dashboard':
+        navigate('/admin/dashboard');
+        break;
+      default:
+        navigate(`/${screen}`);
+    }
   };
 
   const handleGetStarted = (packageId?: string) => {
     if (packageId) {
       setPreSelectedPackageId(packageId);
     }
-    setCurrentScreen('onboarding');
-  };
-
-  const handleSignIn = () => {
-    setCurrentScreen('login');
-  };
-
-  const handleAdminAccess = () => {
-    setCurrentScreen('admin-login');
-  };
-
-  const handleLogin = () => {
-    setCurrentScreen('dashboard');
-  };
-
-  const handleForgotPassword = () => {
-    setCurrentScreen('forgot-password');
-  };
-
-  const handlePasswordReset = () => {
-    setCurrentScreen('login');
-  };
-
-  const handleAdminLogin = () => {
-    setCurrentScreen('admin-dashboard');
-  };
-
-  const handleAdminLogout = () => {
-    setCurrentScreen('landing');
-  };
-
-  const handleBackToLanding = () => {
-    setCurrentScreen('landing');
+    navigate('/onboarding');
   };
 
   const handleOnboardingComplete = (status: UserStatus = 'active', packageName?: string, userQuantity?: number) => {
@@ -82,16 +65,8 @@ export default function App() {
     if (!hasAcceptedTerms) {
       setShowTermsModal(true);
     }
-    
-    setCurrentScreen('dashboard');
-  };
 
-  const handleBackToDashboard = () => {
-    setCurrentScreen('dashboard');
-  };
-
-  const handleLogout = () => {
-    setCurrentScreen('landing');
+    navigate('/dashboard');
   };
 
   const handleAcceptTerms = () => {
@@ -105,76 +80,90 @@ export default function App() {
 
   return (
     <>
-      {(currentScreen === 'admin-login' || currentScreen === 'admin-dashboard') ? (
-        <>
-          {currentScreen === 'admin-login' && (
-            <AdminLogin onLogin={handleAdminLogin} />
-          )}
-          
-          {currentScreen === 'admin-dashboard' && (
-            <AdminDashboard onLogout={handleAdminLogout} />
-          )}
-        </>
-      ) : (
-        <div className="max-w-[430px] mx-auto min-h-screen bg-white">
-          {currentScreen === 'landing' && (
-            <Landing onGetStarted={handleGetStarted} onSignIn={handleSignIn} onAdminAccess={handleAdminAccess} />
-          )}
-          
-          {currentScreen === 'login' && (
-            <Login onLogin={handleLogin} onBackToLanding={handleBackToLanding} onForgotPassword={handleForgotPassword} />
-          )}
-          
-          {currentScreen === 'forgot-password' && (
-            <ForgotPassword onBackToLogin={handleSignIn} onPasswordReset={handlePasswordReset} />
-          )}
-          
-          {currentScreen === 'onboarding' && (
-            <Onboarding 
-              onComplete={handleOnboardingComplete} 
-              preSelectedPackageId={preSelectedPackageId}
-              onBack={handleBackToLanding}
-            />
-          )}
-          
-          {currentScreen === 'dashboard' && (
-            <Dashboard 
-              onNavigate={handleNavigate}
-              userName={userName}
-              onLogout={handleLogout}
-              userStatus={userStatus}
-              selectedPackage={selectedPackage}
-              quantity={quantity}
-            />
-          )}
-          
-          {currentScreen === 'contribute' && (
-            <Contribute 
-              onBack={handleBackToDashboard} 
-              userPackage={selectedPackage}
-              userQuantity={quantity}
-              userEmail="chioma@email.com"
-            />
-          )}
-          
-          {currentScreen === 'value-preview' && (
-            <ValuePreview onBack={handleBackToDashboard} selectedPackage={selectedPackage} />
-          )}
-          
-          {currentScreen === 'announcements' && (
-            <Announcements onBack={handleBackToDashboard} />
-          )}
-          
-          {currentScreen === 'profile' && (
-            <Profile 
-              onNavigate={handleNavigate}
-              userName={userName}
-              selectedPackage={selectedPackage}
-              userStatus={userStatus}
-            />
-          )}
-        </div>
-      )}
+      <Routes>
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={
+          <AdminLogin onLogin={() => navigate('/admin/dashboard')} />
+        } />
+        <Route path="/admin/dashboard/*" element={
+          <AdminDashboard onLogout={() => navigate('/')} />
+        } />
+
+        {/* User Routes - Wrapped in Layout */}
+        <Route path="*" element={
+          <div className="max-w-[430px] mx-auto min-h-screen bg-white">
+            <Routes>
+              <Route path="/" element={
+                <Landing 
+                  onGetStarted={handleGetStarted} 
+                  onSignIn={() => navigate('/login')} 
+                  onAdminAccess={() => navigate('/admin/login')} 
+                />
+              } />
+              <Route path="/login" element={
+                <Login 
+                  onLogin={() => navigate('/dashboard')} 
+                  onBackToLanding={() => navigate('/')} 
+                  onForgotPassword={() => navigate('/forgot-password')} 
+                />
+              } />
+              <Route path="/forgot-password" element={
+                <ForgotPassword 
+                  onBackToLogin={() => navigate('/login')} 
+                  onPasswordReset={() => navigate('/login')} 
+                />
+              } />
+              <Route path="/onboarding" element={
+                <Onboarding 
+                  onComplete={handleOnboardingComplete} 
+                  preSelectedPackageId={preSelectedPackageId}
+                  onBack={() => navigate('/')} 
+                />
+              } />
+              <Route path="/dashboard" element={
+                <Dashboard 
+                  onNavigate={handleNavigate}
+                  userName={userName}
+                  onLogout={() => navigate('/')}
+                  userStatus={userStatus}
+                  selectedPackage={selectedPackage}
+                  quantity={quantity}
+                />
+              } />
+              <Route path="/contribute" element={
+                <Contribute 
+                  onBack={() => navigate('/dashboard')} 
+                  userPackage={selectedPackage}
+                  userQuantity={quantity}
+                />
+              } />
+              <Route path="/value-preview" element={
+                <ValuePreview 
+                  onBack={() => navigate('/dashboard')} 
+                  selectedPackage={selectedPackage} 
+                />
+              } />
+              <Route path="/announcements" element={
+                <Announcements onBack={() => navigate('/dashboard')} />
+              } />
+              <Route path="/profile" element={
+                <Profile 
+                  onNavigate={handleNavigate}
+                  userName={userName}
+                  selectedPackage={selectedPackage}
+                  userStatus={userStatus}
+                />
+              } />
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        } />
+      </Routes>
+      <div className="fixed bottom-0 right-0 z-50">
+      <InstallPWA />
+      </div>
+      <Toaster position="top-center" />
       
       {/* Terms Modal */}
       <TermsModal 

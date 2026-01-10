@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { auth } from '../../lib/api';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { LateJoinerModal } from '../components/LateJoinerModal';
 import { PaystackModal } from '../components/PaystackModal';
-import { User, CheckCircle, AlertCircle, Check, Sparkles, ArrowLeft } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft } from 'lucide-react';
 import { getRegistrationStatus, calculateProportionalValue } from '../utils/registrationLogic';
 import { packages, Package } from '../data/packages';
 
@@ -20,35 +22,59 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [registrationToken, setRegistrationToken] = useState<string | null>(null);
   const [showLateJoinerModal, setShowLateJoinerModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(
     preSelectedPackageId ? packages.find(pkg => pkg.id === preSelectedPackageId) || null : null
   );
-  const [quantity, setQuantity] = useState(1); // New quantity state
+  const [quantity, setQuantity] = useState(1);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const regStatus = getRegistrationStatus();
   const proportionalValue = calculateProportionalValue(regStatus.currentMonth);
 
-  const handlePhoneSubmit = () => {
+  const handlePhoneSubmit = async () => {
     if (phone.length >= 10) {
-      setStep(2);
+      setIsLoading(true);
+      try {
+        await auth.sendOtp(phone);
+        toast.success('OTP sent successfully');
+        setStep(2);
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to send OTP');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleOtpSubmit = () => {
+  const handleOtpSubmit = async () => {
     if (otp.length === 6) {
-      // Check if mid-cycle
-      if (regStatus.isMidCycle && !userChoice) {
-        setShowLateJoinerModal(true);
-      } else {
-        // If package is already pre-selected, go to quantity selection
-        if (selectedPackage) {
-          setStep(3.5); // Go to quantity selection
+      setIsLoading(true);
+      try {
+        const response = await auth.verifyOtp(phone, otp);
+        toast.success(response.message || 'Phone verified successfully');
+        setRegistrationToken(response.data.registration_token);
+
+        // Check if mid-cycle
+        if (regStatus.isMidCycle && !userChoice) {
+          setShowLateJoinerModal(true);
         } else {
-          setStep(3); // Go to package selection
+          // If package is already pre-selected, go to quantity selection
+          if (selectedPackage) {
+            setStep(3.5);
+          } else {
+            setStep(3); // Go to package selection
+          }
         }
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to verify OTP');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -58,16 +84,17 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     setShowLateJoinerModal(false);
     // If package is already pre-selected, go to quantity selection
     if (selectedPackage) {
-      setStep(3.5); // Go to quantity selection
+      setStep(3.5);
     } else {
-      setStep(3); // Go to package selection
+      setStep(3);
     }
   };
 
   const handleReserveNextYear = () => {
     setUserChoice('reserve');
     setShowLateJoinerModal(false);
-    // If package is already pre-selected, skip to profile for reserved users
+    // If reserved, skip quantity for now (or maybe keep it? assuming 1)
+    // Going to step 4 (Profile) directly similar to original reserve flow logic
     if (selectedPackage) {
       setStep(4);
     } else {
@@ -75,28 +102,84 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     }
   };
 
-  const handlePackageSelect = (pkg: Package) => {
-    setSelectedPackage(pkg);
-    setStep(3.5); // Go to quantity selection
+  // Handle package selection
+  const handlePackageSelect = async (pkg: Package) => {
+    // Only call API if we have a registration token
+    if (registrationToken) {
+      setIsLoading(true);
+      try {
+        // Map frontend string IDs to backend integer IDs
+        const packageIdMap: Record<string, number> = {
+          'basic': 1,
+          'family': 2,
+          'premium': 3
+        };
+        const packageId = packageIdMap[pkg.id] || 1; // Default to 1 if not found 
+        const response = await auth.selectPackage(registrationToken, packageId);
+        toast.success(response.message || 'Package selected successfully');
+        // Update token if response provides a new one (API response shows it returns one)
+        if (response.data?.registration_token) {
+           setRegistrationToken(response.data.registration_token);
+        }
+        setSelectedPackage(pkg);
+        setStep(3.5); // Go to quantity selection instead of profile
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to select package');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+       // Fallback for non-API flow or if token missing (shouldn't happen in normal flow)
+       setSelectedPackage(pkg);
+       setStep(3.5); 
+    }
   };
 
-  const handleProfileSubmit = () => {
+  const handleProfileSubmit = async () => {
     if (name.trim() && email.trim() && password.length >= 6) {
-      // For reserved users, skip payment
-      if (userChoice === 'reserve') {
-        onComplete('reserved', selectedPackage?.name, quantity);
-      } else {
-        // Show payment modal for active users
-        setShowPaymentModal(true);
-      }
+       if (registrationToken) {
+         setIsLoading(true);
+         try {
+           await auth.completeRegistration({
+             registration_token: registrationToken,
+             name,
+             phone, // from state
+             email,
+             password
+           });
+           
+           if (userChoice === 'reserve') {
+             toast.success('Registration completed successfully!');
+             onComplete('reserved', selectedPackage?.name, quantity);
+           } else {
+             // Show payment modal for active users
+             setShowPaymentModal(true);
+           }
+         } catch (error: any) {
+           toast.error(error.response?.data?.message || 'Failed to complete registration');
+           console.error(error);
+         } finally {
+           setIsLoading(false);
+         }
+       } else {
+         // Fallback/Legacy flow
+         if (userChoice === 'reserve') {
+           onComplete('reserved', selectedPackage?.name, quantity);
+         } else {
+           setShowPaymentModal(true);
+         }
+       }
     }
   };
 
   const handlePaymentSuccess = () => {
     setShowPaymentModal(false);
+    toast.success('Payment successful! Welcome to Detty December.');
     onComplete('active', selectedPackage?.name, quantity);
   };
 
+  // Back handler
   const handleBack = () => {
     if (step === 1) {
       // Go back to landing
@@ -113,8 +196,14 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
         setStep(3);
       }
     } else if (step === 4) {
-      // Go back to quantity selection
-      setStep(3.5);
+      // Go back to quantity selection (except for reserved users who skipped it?)
+      if (userChoice === 'reserve') {
+         // Reserved users skipped quantity (went 3 -> 4 or 3.5 -> 4 logic might differ)
+         // In handleReserveNextYear we go 3 -> 4. So back is 3.
+         setStep(3);
+      } else {
+         setStep(3.5);
+      }
     }
   };
 
@@ -187,8 +276,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               />
             </Card>
 
-            <GradientButton onClick={handlePhoneSubmit} disabled={phone.length < 10}>
-              Continue
+            <GradientButton onClick={handlePhoneSubmit} disabled={phone.length < 10 || isLoading}>
+              {isLoading ? 'Sending Code...' : 'Continue'}
             </GradientButton>
           </div>
         )}
@@ -222,8 +311,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </button>
             </Card>
 
-            <GradientButton onClick={handleOtpSubmit} disabled={otp.length !== 6}>
-              Verify
+            <GradientButton onClick={handleOtpSubmit} disabled={otp.length !== 6 || isLoading}>
+              {isLoading ? 'Verifying...' : 'Verify'}
             </GradientButton>
           </div>
         )}
@@ -305,7 +394,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                     <button
                       key={pkg.id}
                       onClick={() => handlePackageSelect(pkg)}
-                      className="w-full text-left active:scale-[0.98] transition-transform"
+                      disabled={isLoading}
+                      className="w-full text-left active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden">
                         {/* Badge */}
@@ -349,9 +439,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                           {pkg.benefits.map((benefit, index) => (
                             <div key={index} className="flex items-center gap-2">
                               <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${pkg.gradient} flex items-center justify-center flex-shrink-0`}>
-                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
+                                <Sparkles className="w-3 h-3 text-white" />
                               </div>
                               <span className="text-sm text-gray-700">{benefit}</span>
                             </div>
@@ -649,8 +737,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </Card>
             )}
 
-            <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6}>
-              {userChoice === 'catchup' ? 'Continue to Payment' : 'Start Contributing'}
+            <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}>
+              {userChoice === 'catchup' ? 'Continue to Payment' : (isLoading ? 'Creating Account...' : 'Start Contributing')}
             </GradientButton>
           </div>
         )}

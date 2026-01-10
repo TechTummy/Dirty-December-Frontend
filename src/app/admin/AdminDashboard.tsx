@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, Package, Megaphone, Menu, X, LogOut, Calendar } from 'lucide-react';
+import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { DashboardOverview } from './views/DashboardOverview';
 import { UsersManagement } from './views/UsersManagement';
 import { PackagesManagement } from './views/PackagesManagement';
@@ -12,60 +13,29 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-type AdminView = 'dashboard' | 'users' | 'packages' | 'announcements' | 'package-details' | 'contributions' | 'reserved2027';
-
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'users', label: 'Users', icon: Users },
-  { id: 'reserved2027', label: 'Reserved for 2027', icon: Calendar },
-  { id: 'packages', label: 'Packages', icon: Package },
-  { id: 'announcements', label: 'Announcements', icon: Megaphone },
+  { id: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { id: '/admin/dashboard/users', label: 'Users', icon: Users },
+  { id: '/admin/dashboard/reserved2027', label: 'Reserved for 2027', icon: Calendar },
+  { id: '/admin/dashboard/packages', label: 'Packages', icon: Package },
+  { id: '/admin/dashboard/announcements', label: 'Announcements', icon: Megaphone },
 ] as const;
 
 export function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const [currentView, setCurrentView] = useState<AdminView>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return <DashboardOverview onPackageClick={(packageId) => {
-          setSelectedPackageId(packageId);
-          setCurrentView('package-details');
-        }} />;
-      case 'users':
-        return <UsersManagement />;
-      case 'packages':
-        return <PackagesManagement />;
-      case 'announcements':
-        return <AnnouncementsManagement />;
-      case 'package-details':
-        return <PackageDetailsView 
-          packageId={selectedPackageId ?? 'basic'} 
-          onBack={() => setCurrentView('dashboard')}
-          onViewContributions={(packageId) => {
-            setSelectedPackageId(packageId);
-            setCurrentView('contributions');
-          }}
-        />;
-      case 'contributions':
-        return <ContributionsView 
-          packageId={selectedPackageId ?? 'basic'} 
-          onBack={() => setCurrentView('package-details')} 
-        />;
-      case 'reserved2027':
-        return <Reserved2027 />;
-      default:
-        return <DashboardOverview onPackageClick={(packageId) => {
-          setSelectedPackageId(packageId);
-          setCurrentView('package-details');
-        }} />;
+  // Helper to determine active state
+  const isPathActive = (path: string, exact = false) => {
+    if (exact) {
+      return location.pathname === path || location.pathname === path + '/';
     }
+    return location.pathname.startsWith(path);
   };
 
-  const handleNavClick = (viewId: AdminView) => {
-    setCurrentView(viewId);
+  const handleNavClick = (path: string) => {
+    navigate(path);
     setSidebarOpen(false);
   };
 
@@ -88,11 +58,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         <nav className="flex-1 p-4 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentView === item.id;
+            const isActive = isPathActive(item.id, (item as any).exact);
             return (
               <button
                 key={item.id}
-                onClick={() => handleNavClick(item.id as AdminView)}
+                onClick={() => handleNavClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
@@ -152,11 +122,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         <nav className="flex-1 p-4 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentView === item.id;
+            const isActive = isPathActive(item.id, (item as any).exact);
             return (
               <button
                 key={item.id}
-                onClick={() => handleNavClick(item.id as AdminView)}
+                onClick={() => handleNavClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
@@ -195,7 +165,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
               </button>
               <div>
                 <h1 className="font-bold text-gray-900 text-lg">
-                  {navItems.find(item => item.id === currentView)?.label}
+                  {navItems.find(item => isPathActive(item.id, (item as any).exact))?.label || 'Dashboard'}
                 </h1>
                 <p className="text-sm text-gray-500">Manage your platform</p>
               </div>
@@ -219,9 +189,55 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
         {/* Content Area */}
         <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
-          {renderView()}
+          <Routes>
+            <Route index element={
+              <DashboardOverview onPackageClick={(packageId) => {
+                navigate(`/admin/dashboard/packages/${packageId}`);
+              }} />
+            } />
+            <Route path="users" element={<UsersManagement />} />
+            <Route path="packages" element={<PackagesManagement />} />
+            <Route path="announcements" element={<AnnouncementsManagement />} />
+            <Route path="reserved2027" element={<Reserved2027 />} />
+            
+            {/* Dynamic Routes for Details */}
+            <Route path="packages/:packageId" element={<PackageRouterWrapper />} />
+             <Route path="packages/:packageId/contributions" element={<ContributionsRouterWrapper />} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+          </Routes>
         </div>
       </main>
     </div>
+  );
+}
+
+// Wrapper to extract params for PackageDetailsView
+function PackageRouterWrapper() {
+  const params = useParams();
+  const navigate = useNavigate();
+  
+  return (
+    <PackageDetailsView 
+      packageId={params.packageId || 'basic'} 
+      onBack={() => navigate('/admin/dashboard')}
+      onViewContributions={(packageId) => {
+        navigate(`/admin/dashboard/packages/${packageId}/contributions`);
+      }}
+    />
+  );
+}
+
+// Wrapper for ContributionsView
+function ContributionsRouterWrapper() {
+  const params = useParams();
+  const navigate = useNavigate();
+
+  return (
+     <ContributionsView 
+      packageId={params.packageId || 'basic'} 
+      onBack={() => navigate(`/admin/dashboard/packages/${params.packageId}`)} 
+    />
   );
 }
