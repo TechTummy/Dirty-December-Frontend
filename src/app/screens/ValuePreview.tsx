@@ -39,8 +39,14 @@ export function ValuePreview({ onBack, selectedPackage = 'Basic Bundle' }: Value
               {userPackage.name}
             </div>
             
-            <p className="text-sm text-gray-500 mb-3 font-medium">Your Annual Contribution</p>
-            <p className="text-3xl font-bold text-gray-900 mb-6">₦{yearlyContribution.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 mb-2 font-medium">Monthly Contribution</p>
+            <p className="text-2xl font-bold text-gray-900 mb-1">₦{userPackage.monthlyAmount.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mb-4">per month</p>
+            
+            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-4"></div>
+            
+            <p className="text-sm text-gray-500 mb-2 font-medium">Your Annual Contribution</p>
+            <p className="text-2xl font-bold text-gray-900 mb-6">₦{yearlyContribution.toLocaleString()}</p>
             
             <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-6"></div>
             

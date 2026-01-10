@@ -4,12 +4,13 @@ import { auth } from '../../lib/api';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { LateJoinerModal } from '../components/LateJoinerModal';
-import { User, CheckCircle, AlertCircle, Check, Sparkles, ArrowLeft } from 'lucide-react';
+import { PaystackModal } from '../components/PaystackModal';
+import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft } from 'lucide-react';
 import { getRegistrationStatus, calculateProportionalValue } from '../utils/registrationLogic';
 import { packages, Package } from '../data/packages';
 
 interface OnboardingProps {
-  onComplete: (userStatus?: 'active' | 'reserved', selectedPackage?: string) => void;
+  onComplete: (userStatus?: 'active' | 'reserved', selectedPackage?: string, quantity?: number) => void;
   preSelectedPackageId?: string | null;
   onBack?: () => void;
 }
@@ -28,6 +29,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(
     preSelectedPackageId ? packages.find(pkg => pkg.id === preSelectedPackageId) || null : null
   );
+  const [quantity, setQuantity] = useState(1);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const regStatus = getRegistrationStatus();
   const proportionalValue = calculateProportionalValue(regStatus.currentMonth);
@@ -60,9 +63,9 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
         if (regStatus.isMidCycle && !userChoice) {
           setShowLateJoinerModal(true);
         } else {
-          // If package is already pre-selected, skip to profile
+          // If package is already pre-selected, go to quantity selection
           if (selectedPackage) {
-            setStep(4);
+            setStep(3.5);
           } else {
             setStep(3); // Go to package selection
           }
@@ -79,18 +82,19 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const handleCatchUp = () => {
     setUserChoice('catchup');
     setShowLateJoinerModal(false);
-    // If package is already pre-selected, skip to profile
+    // If package is already pre-selected, go to quantity selection
     if (selectedPackage) {
-      setStep(4);
+      setStep(3.5);
     } else {
-      setStep(3); // Go to package selection
+      setStep(3);
     }
   };
 
   const handleReserveNextYear = () => {
     setUserChoice('reserve');
     setShowLateJoinerModal(false);
-    // If package is already pre-selected, skip to profile
+    // If reserved, skip quantity for now (or maybe keep it? assuming 1)
+    // Going to step 4 (Profile) directly similar to original reserve flow logic
     if (selectedPackage) {
       setStep(4);
     } else {
@@ -118,7 +122,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
            setRegistrationToken(response.data.registration_token);
         }
         setSelectedPackage(pkg);
-        setStep(4);
+        setStep(3.5); // Go to quantity selection instead of profile
       } catch (error: any) {
         toast.error(error.response?.data?.message || 'Failed to select package');
         console.error(error);
@@ -128,7 +132,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     } else {
        // Fallback for non-API flow or if token missing (shouldn't happen in normal flow)
        setSelectedPackage(pkg);
-       setStep(4); 
+       setStep(3.5); 
     }
   };
 
@@ -144,8 +148,14 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
              email,
              password
            });
-           toast.success('Registration completed successfully!');
-           onComplete(userChoice === 'reserve' ? 'reserved' : 'active', selectedPackage?.name);
+           
+           if (userChoice === 'reserve') {
+             toast.success('Registration completed successfully!');
+             onComplete('reserved', selectedPackage?.name, quantity);
+           } else {
+             // Show payment modal for active users
+             setShowPaymentModal(true);
+           }
          } catch (error: any) {
            toast.error(error.response?.data?.message || 'Failed to complete registration');
            console.error(error);
@@ -154,9 +164,19 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
          }
        } else {
          // Fallback/Legacy flow
-         onComplete(userChoice === 'reserve' ? 'reserved' : 'active', selectedPackage?.name);
+         if (userChoice === 'reserve') {
+           onComplete('reserved', selectedPackage?.name, quantity);
+         } else {
+           setShowPaymentModal(true);
+         }
        }
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    toast.success('Payment successful! Welcome to Detty December.');
+    onComplete('active', selectedPackage?.name, quantity);
   };
 
   // Back handler
@@ -168,12 +188,21 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
       setStep(1);
     } else if (step === 3) {
       setStep(2);
-    } else if (step === 4) {
-      // If package was pre-selected, go back to step 2 (OTP)
+    } else if (step === 3.5) {
+      // Go back to package selection if not pre-selected
       if (preSelectedPackageId) {
         setStep(2);
       } else {
-        setStep(3); // Otherwise go back to package selection
+        setStep(3);
+      }
+    } else if (step === 4) {
+      // Go back to quantity selection (except for reserved users who skipped it?)
+      if (userChoice === 'reserve') {
+         // Reserved users skipped quantity (went 3 -> 4 or 3.5 -> 4 logic might differ)
+         // In handleReserveNextYear we go 3 -> 4. So back is 3.
+         setStep(3);
+      } else {
+         setStep(3.5);
       }
     }
   };
@@ -381,10 +410,18 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                           <h3 className="text-xl font-bold mb-1">{pkg.name}</h3>
                           <p className="text-white/90 text-sm mb-4">{pkg.description}</p>
                           
+                          <div className="mb-3">
+                            <span className="text-sm text-white/80 block mb-1">Monthly Contribution</span>
+                            <div className="flex items-end gap-2 mb-1">
+                              <span className="text-4xl font-bold">₦{pkg.monthlyAmount.toLocaleString()}</span>
+                              <span className="text-white/80 pb-1">/month</span>
+                            </div>
+                          </div>
+                          
                           <div className="mb-2">
                             <span className="text-sm text-white/80 block mb-1">Total Yearly Contribution</span>
                             <div className="flex items-end gap-2 mb-1">
-                              <span className="text-4xl font-bold">₦{pkg.yearlyTotal.toLocaleString()}</span>
+                              <span className="text-2xl font-bold">₦{pkg.yearlyTotal.toLocaleString()}</span>
                               <span className="text-white/80 pb-1">/year</span>
                             </div>
                           </div>
@@ -399,22 +436,14 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
 
                         {/* Benefits */}
                         <div className="space-y-2.5 mb-4">
-                          {pkg.benefits.map((benefit, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
+                          {pkg.benefits.map((benefit, index) => (
+                            <div key={index} className="flex items-center gap-2">
                               <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${pkg.gradient} flex items-center justify-center flex-shrink-0`}>
-                                <Check className="w-3 h-3 text-white" />
+                                <Sparkles className="w-3 h-3 text-white" />
                               </div>
                               <span className="text-sm text-gray-700">{benefit}</span>
                             </div>
                           ))}
-                        </div>
-
-                        {/* Savings Highlight */}
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 -mx-6 px-6 -mb-6 pb-6 bg-emerald-50">
-                          <span className="text-sm text-emerald-900 font-medium">You Save</span>
-                          <span className="font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                            ₦{pkg.savings.toLocaleString()} ({pkg.savingsPercent}%)
-                          </span>
                         </div>
                       </Card>
                     </button>
@@ -422,6 +451,112 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Step 3.5: Quantity Selection */}
+        {step === 3.5 && selectedPackage && (
+          <div>
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">
+                How Many Slots?
+              </h2>
+              <p className="text-gray-600 leading-relaxed">
+                Contributing for yourself and others? Select how many people you're paying for
+              </p>
+            </div>
+
+            {/* Selected Package Summary */}
+            <Card className={`mb-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border border-purple-200`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center shadow-lg ${selectedPackage.shadowColor}`}>
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">{selectedPackage.name}</h3>
+                  <p className="text-xs text-gray-600">{selectedPackage.description}</p>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Per person/month</span>
+                <span className="font-bold text-gray-900">₦{selectedPackage.monthlyAmount.toLocaleString()}</span>
+              </div>
+            </Card>
+
+            {/* Quantity Selector */}
+            <Card className="mb-6 border-0 shadow-lg">
+              <label className="block mb-4 text-sm font-semibold text-gray-900">
+                Number of Slots
+              </label>
+              <div className="grid grid-cols-5 gap-3">
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => setQuantity(num)}
+                    className={`h-14 rounded-xl font-bold text-lg transition-all ${
+                      quantity === num
+                        ? `bg-gradient-to-br ${selectedPackage.gradient} text-white shadow-lg ${selectedPackage.shadowColor}`
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+              
+              {quantity > 1 && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <p className="text-sm text-blue-900 mb-2">
+                    <span className="font-semibold">Contributing for {quantity} people</span>
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    You're paying for {quantity} {quantity === 1 ? 'slot' : 'slots'}. Each person will receive their own package in December.
+                  </p>
+                </div>
+              )}
+            </Card>
+
+            {/* Total Payment Summary */}
+            <Card className="mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 font-medium">Monthly Payment per slot</span>
+                  <span className="font-bold text-gray-900">₦{selectedPackage.monthlyAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 font-medium">Number of Slots</span>
+                  <span className="font-bold text-gray-900">{quantity} {quantity === 1 ? 'person' : 'people'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-gray-900">Total Monthly Payment</span>
+                  <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    ₦{(selectedPackage.monthlyAmount * quantity).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 font-medium">Total per Year</span>
+                  <span className="font-bold text-gray-900">₦{(selectedPackage.yearlyTotal * quantity).toLocaleString()}</span>
+                </div>
+                <div className="h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent"></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-gray-900">Package Value</span>
+                  <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    ₦{(selectedPackage.estimatedRetailValue * quantity).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-gray-900">Total Savings</span>
+                  <span className="text-xl font-bold text-purple-700">
+                    ₦{(selectedPackage.savings * quantity).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            <GradientButton onClick={() => setStep(4)}>
+              Continue to Profile
+            </GradientButton>
           </div>
         )}
 
@@ -507,13 +642,21 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                     <span className="font-bold text-gray-900">{selectedPackage?.name}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 font-medium">Monthly Amount</span>
+                    <span className="text-sm text-gray-600 font-medium">Slots</span>
+                    <span className="font-bold text-gray-900">{quantity} {quantity === 1 ? 'person' : 'people'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">Monthly Amount per slot</span>
                     <span className="font-bold text-gray-900">₦{selectedPackage?.monthlyAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">Total Monthly Payment</span>
+                    <span className="font-bold text-gray-900">{((selectedPackage?.monthlyAmount || 5000) * quantity).toLocaleString()}</span>
                   </div>
                   <div className="h-px bg-gradient-to-r from-transparent via-amber-200 to-transparent"></div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Total catch-up amount</span>
-                    <span className="text-xl font-bold text-gray-900">₦{((selectedPackage?.monthlyAmount || 5000) * regStatus.monthsOwed).toLocaleString()}</span>
+                    <span className="text-xl font-bold text-gray-900">₦{((selectedPackage?.monthlyAmount || 5000) * quantity * regStatus.monthsOwed).toLocaleString()}</span>
                   </div>
                 </div>
               </Card>
@@ -532,24 +675,34 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 font-medium">Monthly Payment</span>
+                    <span className="text-sm text-gray-600 font-medium">Monthly Payment per slot</span>
                     <span className="font-bold text-gray-900">₦{selectedPackage.monthlyAmount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">Number of Slots</span>
+                    <span className="font-bold text-gray-900">{quantity} {quantity === 1 ? 'person' : 'people'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-gray-900">Total Monthly Payment</span>
+                    <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      ₦{(selectedPackage.monthlyAmount * quantity).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Total per Year</span>
-                    <span className="font-bold text-gray-900">₦{selectedPackage.yearlyTotal.toLocaleString()}</span>
+                    <span className="font-bold text-gray-900">₦{(selectedPackage.yearlyTotal * quantity).toLocaleString()}</span>
                   </div>
                   <div className="h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent"></div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-gray-900">Package Value</span>
                     <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                      ₦{selectedPackage.estimatedRetailValue.toLocaleString()}
+                      ₦{(selectedPackage.estimatedRetailValue * quantity).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-gray-900">Total Savings</span>
                     <span className="text-xl font-bold text-purple-700">
-                      ₦{selectedPackage.savings.toLocaleString()}
+                      ₦{(selectedPackage.savings * quantity).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -601,6 +754,18 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
           onCatchUp={handleCatchUp}
           onReserveNextYear={handleReserveNextYear}
           onClose={() => setShowLateJoinerModal(false)}
+        />
+      )}
+
+      {/* Paystack Payment Modal */}
+      {showPaymentModal && selectedPackage && (
+        <PaystackModal
+          amount={selectedPackage.monthlyAmount * quantity}
+          email={email}
+          packageName={selectedPackage.name}
+          quantity={quantity}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => setShowPaymentModal(false)}
         />
       )}
     </div>

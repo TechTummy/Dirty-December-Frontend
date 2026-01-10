@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, MessageCircle, Filter, DollarSign, Calendar, User, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, MessageCircle, Filter, DollarSign, Calendar, User, X, Image as ImageIcon, Download } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { getPackageById } from '../../data/packages';
 
@@ -16,6 +16,7 @@ interface Contribution {
   userPhone: string;
   month: string;
   amount: number;
+  quantity: number; // Number of slots
   status: 'pending' | 'confirmed' | 'declined';
   date: string;
   transactionId: string;
@@ -28,6 +29,7 @@ interface Contribution {
 export function ContributionsView({ packageId, onBack }: ContributionsViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterMonth, setFilterMonth] = useState('all');
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [showProofPreview, setShowProofPreview] = useState(false);
   const [contributions, setContributions] = useState<Contribution[]>([
@@ -39,6 +41,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       userPhone: '080 1234 5678',
       month: 'January',
       amount: 15000,
+      quantity: 1, // Number of slots
       status: 'confirmed',
       date: '2024-01-15',
       transactionId: 'DD-2024-JAN-001542',
@@ -55,6 +58,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       userPhone: '080 1234 5678',
       month: 'February',
       amount: 15000,
+      quantity: 1, // Number of slots
       status: 'pending',
       date: '2024-02-15',
       transactionId: 'DD-2024-FEB-001789',
@@ -71,6 +75,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       userPhone: '070 4567 8901',
       month: 'January',
       amount: 15000,
+      quantity: 1, // Number of slots
       status: 'pending',
       date: '2024-01-20',
       transactionId: 'DD-2024-JAN-001678',
@@ -87,6 +92,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       userPhone: '081 8901 2345',
       month: 'March',
       amount: 15000,
+      quantity: 1, // Number of slots
       status: 'confirmed',
       date: '2024-03-10',
       transactionId: 'DD-2024-MAR-002103',
@@ -103,6 +109,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       userPhone: '070 4567 8901',
       month: 'February',
       amount: 15000,
+      quantity: 1, // Number of slots
       status: 'declined',
       date: '2024-02-20',
       transactionId: 'DD-2024-FEB-001890',
@@ -119,6 +126,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       userPhone: '080 1234 5678',
       month: 'March',
       amount: 15000,
+      quantity: 1, // Number of slots
       status: 'confirmed',
       date: '2024-03-15',
       transactionId: 'DD-2024-MAR-002234',
@@ -135,6 +143,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       userPhone: '081 8901 2345',
       month: 'April',
       amount: 15000,
+      quantity: 1, // Number of slots
       status: 'pending',
       date: '2024-04-12',
       transactionId: 'DD-2024-APR-002456',
@@ -174,7 +183,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       contribution.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contribution.reference.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || contribution.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesMonth = filterMonth === 'all' || contribution.month === filterMonth;
+    return matchesSearch && matchesStatus && matchesMonth;
   });
 
   const stats = {
@@ -208,6 +218,45 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
         Pending
       </span>
     );
+  };
+
+  const handleExport = () => {
+    // Create CSV header
+    const headers = ['Transaction ID', 'User Name', 'Email', 'Phone', 'Month', 'Slots', 'Amount', 'Payment Method', 'Reference', 'Status', 'Date', 'Time'];
+    
+    // Create CSV rows from filtered data
+    const rows = filteredContributions.map(c => [
+      c.transactionId,
+      c.userName,
+      c.userEmail,
+      c.userPhone,
+      c.month,
+      c.quantity.toString(),
+      c.amount.toString(),
+      c.paymentMethod,
+      c.reference,
+      c.status,
+      c.date,
+      c.time
+    ]);
+    
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${packageData.name}_contributions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -301,6 +350,35 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
               <option value="confirmed">Confirmed</option>
               <option value="declined">Declined</option>
             </select>
+
+            <select
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="all">All Months</option>
+              <option value="January">January</option>
+              <option value="February">February</option>
+              <option value="March">March</option>
+              <option value="April">April</option>
+              <option value="May">May</option>
+              <option value="June">June</option>
+              <option value="July">July</option>
+              <option value="August">August</option>
+              <option value="September">September</option>
+              <option value="October">October</option>
+              <option value="November">November</option>
+              <option value="December">December</option>
+            </select>
+
+            <button
+              onClick={handleExport}
+              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 transition-all text-white font-semibold rounded-xl flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+              <span className="sm:hidden">Export</span>
+            </button>
           </div>
         </div>
 
@@ -320,6 +398,10 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                 <div className="flex justify-between">
                   <span className="text-gray-500">Month:</span>
                   <span className="text-gray-900 font-medium">{contribution.month}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Slots:</span>
+                  <span className="text-gray-900 font-medium">{contribution.quantity} {contribution.quantity === 1 ? 'person' : 'people'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Amount:</span>
@@ -375,6 +457,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">User</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Month</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Slots</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Amount</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Payment Method</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Reference</th>
@@ -394,6 +477,13 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                   </td>
                   <td className="py-4 px-4">
                     <p className="font-medium text-gray-700">{contribution.month}</p>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                        {contribution.quantity} {contribution.quantity === 1 ? 'slot' : 'slots'}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-4 px-4">
                     <p className="font-semibold text-gray-900">₦{contribution.amount.toLocaleString()}</p>
@@ -491,10 +581,15 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                     <p className="text-xs font-medium text-purple-700 mb-1">Month</p>
                     <p className="font-semibold text-gray-900">{selectedContribution.month}</p>
                   </div>
-                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                    <p className="text-xs font-medium text-emerald-700 mb-1">Amount</p>
-                    <p className="font-semibold text-gray-900">₦{selectedContribution.amount.toLocaleString()}</p>
+                  <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                    <p className="text-xs font-medium text-indigo-700 mb-1">Slots</p>
+                    <p className="font-semibold text-gray-900">{selectedContribution.quantity} {selectedContribution.quantity === 1 ? 'person' : 'people'}</p>
                   </div>
+                </div>
+
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <p className="text-xs font-medium text-emerald-700 mb-1">Total Amount</p>
+                  <p className="font-semibold text-gray-900">₦{selectedContribution.amount.toLocaleString()}</p>
                 </div>
 
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">

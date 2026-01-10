@@ -93,10 +93,18 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
                   <h3 className="text-xl font-bold mb-1">{pkg.name}</h3>
                   <p className="text-white/90 text-sm mb-4">{pkg.description}</p>
                   
+                  <div className="mb-3">
+                    <span className="text-sm text-white/80 block mb-1">Monthly Contribution</span>
+                    <div className="flex items-end gap-2 mb-1">
+                      <span className="text-4xl font-bold">₦{pkg.monthlyAmount.toLocaleString()}</span>
+                      <span className="text-white/80 pb-1">/month</span>
+                    </div>
+                  </div>
+                  
                   <div className="mb-2">
                     <span className="text-sm text-white/80 block mb-1">Total Yearly Contribution</span>
                     <div className="flex items-end gap-2 mb-1">
-                      <span className="text-4xl font-bold">₦{pkg.yearlyTotal.toLocaleString()}</span>
+                      <span className="text-2xl font-bold">₦{pkg.yearlyTotal.toLocaleString()}</span>
                       <span className="text-white/80 pb-1">/year</span>
                     </div>
                   </div>
@@ -143,13 +151,6 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
                       </div>
                     ))
                   )}
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100 -mx-6 px-6 -mb-6 pb-6 bg-emerald-50">
-                  <span className="text-sm text-emerald-900 font-medium">You Save</span>
-                  <span className="font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    ₦{pkg.savings.toLocaleString()} ({pkg.savingsPercent}%)
-                  </span>
                 </div>
               </Card>
             ))}
