@@ -20,16 +20,19 @@ interface LandingProps {
 export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps) {
   const [selectedPackageForModal, setSelectedPackageForModal] = useState<string | null>(null);
 
-  const { data: backendPackages, isLoading } = useQuery({
-    queryKey: ['public-packages'],
+  // Fetch packages from backend
+  const { data: packagesData, isLoading: isLoadingPackages } = useQuery({
+    queryKey: ['packages'],
     queryFn: auth.getPackages,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1
   });
-
-  const displayPackages = mergeBackendPackages(backendPackages?.data?.packages || []);
   
-  const selectedPackage = displayPackages.find(pkg => pkg.id === selectedPackageForModal);
+  // Combine backend data with frontend UI definitions
+  const backendList = packagesData?.data?.packages && Array.isArray(packagesData.data.packages) 
+    ? packagesData.data.packages 
+    : [];
+  const mergedPackages = mergeBackendPackages(backendList);
+  
+  const selectedPackage = mergedPackages.find(pkg => pkg.id === selectedPackageForModal);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
@@ -90,14 +93,15 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           
           
           <div className="space-y-4">
-            {isLoading && !backendPackages ? (
+
+            {isLoadingPackages && (!mergedPackages || mergedPackages.length === 0) ? (
               // Loading skeleton could be here, but for now fallback to static or just show spinning state
               <div className="text-center py-10">
                  <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-2"></div>
                  <p className="text-gray-500 text-sm">Loading packages...</p>
               </div>
             ) : (
-              displayPackages.map((pkg) => (
+              mergedPackages.map((pkg) => (
               <Card 
                 key={pkg.id} 
                 className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all relative cursor-pointer active:scale-[0.98]"

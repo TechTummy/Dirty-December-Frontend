@@ -2,7 +2,10 @@ import { ArrowLeft, TrendingDown, Package as PackageIcon, Sparkles } from 'lucid
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { PriceDisclaimer } from '../components/PriceDisclaimer';
-import { packages } from '../data/packages';
+import { auth } from '../../lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { mergeBackendPackages } from '../utils/packageUtils';
+import { Loader } from 'lucide-react';
 
 interface ValuePreviewProps {
   onBack: () => void;
@@ -10,8 +13,32 @@ interface ValuePreviewProps {
 }
 
 export function ValuePreview({ onBack, selectedPackage = 'Basic Bundle' }: ValuePreviewProps) {
+  // Fetch packages from backend
+  const { data: packagesData, isLoading } = useQuery({
+    queryKey: ['packages'],
+    queryFn: auth.getPackages,
+  });
+
+  // Ensure we have a valid array before merging, otherwise fallback to empty array
+  // API response structure: { success: true, data: { packages: [...] } }
+  const backendList = packagesData?.data?.packages && Array.isArray(packagesData.data.packages) 
+    ? packagesData.data.packages 
+    : [];
+  const mergedPackages = mergeBackendPackages(backendList);
+  
   // Get the user's package
-  const userPackage = packages.find(pkg => pkg.name === selectedPackage) || packages[0];
+  const userPackage = mergedPackages.find(pkg => pkg.name === selectedPackage) || mergedPackages[0];
+
+  if (isLoading || !userPackage) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+          <p className="text-gray-600 font-medium">Loading package details...</p>
+        </div>
+      </div>
+    );
+  }
   
   const totalRetail = userPackage.estimatedRetailValue;
   const yearlyContribution = userPackage.yearlyTotal;
@@ -73,50 +100,47 @@ export function ValuePreview({ onBack, selectedPackage = 'Basic Bundle' }: Value
         </div>
 
         {/* Package Benefits */}
-        {userPackage.detailedBenefits && userPackage.detailedBenefits.length > 0 ? (
-          <div className="space-y-3 mb-6">
-            {userPackage.detailedBenefits.map((benefit, index) => (
-              <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${userPackage.gradient} flex items-center justify-center shadow-lg ${userPackage.shadowColor}`}>
-                      <span className="text-white font-bold">{index + 1}</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{benefit.item}</h3>
-                      <p className="text-sm text-gray-600">{benefit.quantity} {benefit.unit}</p>
-                    </div>
+        {/* Package Benefits */}
+        <div className="space-y-3 mb-6">
+          {(userPackage.detailedBenefits?.length > 0 ? userPackage.detailedBenefits : userPackage.benefits.map(benefitString => {
+            // Parse "Item - Quantity Unit" format
+            // e.g. "Premium Rice - 3 25kg bag" -> { item: "Premium Rice", details: "3 25kg bag" }
+            const parts = benefitString.split(' - ');
+            const item = parts[0];
+            const details = parts.length > 1 ? parts.slice(1).join(' - ') : '';
+            
+            return {
+              item: item,
+              quantity: '', // We don't have separate quantity/unit easily, so we'll combine them
+              unit: details,
+              original: benefitString
+            };
+          })).map((benefit: any, index: number) => (
+            <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${userPackage.gradient} flex items-center justify-center shadow-lg ${userPackage.shadowColor}`}>
+                    <span className="text-white font-bold">{index + 1}</span>
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-3 mb-6">
-            {userPackage.benefits.map((benefit, index) => (
-              <Card key={index} className="border-0 shadow-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${userPackage.gradient} flex items-center justify-center shadow-lg ${userPackage.shadowColor}`}>
-                      <span className="text-white font-bold">{index + 1}</span>
-                    </div>
-                    <p className="font-semibold text-gray-900">{benefit}</p>
-                  </div>
-                  <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{benefit.item}</h3>
+                    {/* Display parsed details if available, otherwise hide the line */}
+                    {(benefit.unit || benefit.quantity) && (
+                      <p className="text-sm text-gray-600">
+                        {benefit.quantity} {benefit.unit}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
+                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
 
         {/* Package Summary - No Pricing */}
         <Card className={`bg-gradient-to-br ${userPackage.gradient} text-white border-0 shadow-2xl ${userPackage.shadowColor}`}>

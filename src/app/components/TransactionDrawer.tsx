@@ -94,7 +94,13 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
               {selectedTransaction ? 'Transaction Details' : 'Transaction History'}
             </h2>
             <p className="text-sm text-gray-500">
-              {selectedTransaction ? selectedTransaction.month + ' 2024' : `${transactions.length} transactions`}
+              {selectedTransaction 
+                ? (selectedTransaction.date 
+                    ? new Date(selectedTransaction.date).toLocaleDateString('default', { month: 'long', year: 'numeric' })
+                    : (selectedTransaction.created_at
+                       ? new Date(selectedTransaction.created_at).toLocaleDateString('default', { month: 'long', year: 'numeric' })
+                       : `${selectedTransaction.month} ${new Date().getFullYear()}`))
+                : `${transactions.length} transactions`}
             </p>
           </div>
           <button 
@@ -175,7 +181,14 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Contribution Month</span>
-                    <span className="text-sm font-semibold text-gray-900">{selectedTransaction.month} 2024</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                       {selectedTransaction.date 
+                         ? new Date(selectedTransaction.date).toLocaleDateString('default', { month: 'long', year: 'numeric' })
+                         : (selectedTransaction.created_at
+                            ? new Date(selectedTransaction.created_at).toLocaleDateString('default', { month: 'long', year: 'numeric' })
+                            : `${selectedTransaction.month} ${new Date().getFullYear()}`)
+                       }
+                    </span>
                   </div>
                 </div>
               </Card>
