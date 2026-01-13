@@ -1,9 +1,8 @@
 import axios from 'axios';
 
 // Create a standard axios instance given the base URL.
-// We'll update the baseURL once the user provides it.
 export const api = axios.create({
-    baseURL: '/', // Use proxy in development
+    baseURL: '/',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -36,6 +35,10 @@ api.interceptors.response.use(
 export const auth = {
     sendOtp: async (phone: string) => {
         const response = await api.post('/api/v1/users/auth/send-otp', { phone });
+        return response.data;
+    },
+    getPackages: async () => {
+        const response = await api.get('/api/v1/users/auth/packages');
         return response.data;
     },
     verifyOtp: async (phone: string, code: string) => {
