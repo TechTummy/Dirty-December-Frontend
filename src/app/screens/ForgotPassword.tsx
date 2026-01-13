@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Phone, Lock, Eye, EyeOff, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Phone, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { auth } from '../../lib/api';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 
@@ -21,7 +23,7 @@ export function ForgotPassword({ onBackToLogin, onPasswordReset }: ForgotPasswor
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleIdentify = (e: React.FormEvent) => {
+  const handleIdentify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -31,12 +33,17 @@ export function ForgotPassword({ onBackToLogin, onPasswordReset }: ForgotPasswor
     }
 
     setIsLoading(true);
-    
-    // Simulate sending verification code
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // API call to send OTP
+      const response = await auth.forgotPassword(phoneNumber);
+      toast.success(response.message || 'OTP sent successfully');
       setStep('verify');
-    }, 1000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to send verification code');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVerificationCodeChange = (index: number, value: string) => {
@@ -70,16 +77,12 @@ export function ForgotPassword({ onBackToLogin, onPasswordReset }: ForgotPasswor
       return;
     }
 
-    setIsLoading(true);
-    
-    // Simulate code verification
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep('reset');
-    }, 1000);
+    // For this flow, we don't verify OTP independently, we verify it during reset.
+    // So just move to next step to collect password.
+    setStep('reset');
   };
 
-  const handleReset = (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -94,22 +97,34 @@ export function ForgotPassword({ onBackToLogin, onPasswordReset }: ForgotPasswor
     }
 
     setIsLoading(true);
-    
-    // Simulate password reset
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await auth.resetPassword({
+        identifier: phoneNumber,
+        code: verificationCode.join(''),
+        password: newPassword,
+        password_confirmation: confirmPassword
+      });
+      toast.success('Password reset successfully');
       setStep('success');
-    }, 1000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to reset password');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     setIsLoading(true);
-    
-    // Simulate resending code
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await auth.forgotPassword(phoneNumber);
+      toast.success('OTP resent successfully');
       setVerificationCode(['', '', '', '', '', '']);
-    }, 1000);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to resend code');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

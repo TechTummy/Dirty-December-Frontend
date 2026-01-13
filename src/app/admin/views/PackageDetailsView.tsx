@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Users, DollarSign, TrendingUp, Calendar, ArrowLeft, Search, Eye, Ban, CheckCircle, Clock, MapPin, Truck, X, Receipt } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Calendar, ArrowLeft, Search, Eye, Ban, CheckCircle, Clock, MapPin, Truck, X, Receipt, Loader } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '../../components/Card';
-import { packages as allPackages, getPackageById } from '../../data/packages';
+import { admin } from '../../../lib/api';
 
 interface PackageDetailsViewProps {
   packageId: string;
@@ -16,200 +17,108 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   const [selectedUserAddress, setSelectedUserAddress] = useState<any | null>(null);
   const [viewingUser, setViewingUser] = useState<any | null>(null);
 
-  // Get the specific package
-  const packageData = getPackageById(packageId);
+  // Get the specific package from API
+  const { data: packageApiResponse, isLoading: isLoadingPackage } = useQuery({
+    queryKey: ['package', packageId],
+    queryFn: () => admin.getPackageById(packageId),
+  });
+
+  const packageData = packageApiResponse?.data;
+
+  // Fetch users for this package
+  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: admin.getUsers,
+  });
+
+  // Fetch transactions for this package to calculate totals
+  const { data: transactionsData } = useQuery({
+    queryKey: ['admin-package-transactions', packageId],
+    queryFn: () => admin.getTransactions({ package_id: packageId }),
+  });
+
+  if (isLoadingPackage || isLoadingUsers) {
+    return (
+      <div className="flex bg-slate-50 min-h-screen items-center justify-center">
+         <Loader className="w-8 h-8 animate-spin text-purple-600" />
+      </div>
+    );
+  }
 
   if (!packageData) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">Package not found</p>
+        <button onClick={onBack} className="mt-4 text-blue-600 hover:underline">Go Back</button>
       </div>
     );
   }
 
-  // Mock users data for this package
-  const allUsers = [
-    {
-      id: 1,
-      name: 'Chioma Adebayo',
-      phone: '080 1234 5678',
-      email: 'chioma@email.com',
-      package: 'Family Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 60000,
-      joinedDate: 'Jan 2024',
-      deliveryMethod: 'delivery',
-      deliveryAddress: {
-        address: '123 Main Street, Ikeja',
-        city: 'Lagos',
-        state: 'Lagos',
-        landmark: 'Near Ikeja Mall',
-        phoneNumber: '080 1234 5678'
-      }
-    },
-    {
-      id: 2,
-      name: 'Emeka Johnson',
-      phone: '081 2345 6789',
-      email: 'emeka@email.com',
-      package: 'Basic Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 20000,
-      joinedDate: 'Jan 2024',
-      deliveryMethod: 'pickup',
-      deliveryAddress: null
-    },
-    {
-      id: 3,
-      name: 'Blessing Okeke',
-      phone: '090 3456 7890',
-      email: 'blessing@email.com',
-      package: 'Premium Bundle',
-      status: 'active',
-      contributions: 3,
-      totalPaid: 150000,
-      joinedDate: 'Feb 2024',
-      deliveryMethod: 'delivery',
-      deliveryAddress: {
-        address: '456 Victoria Island Road',
-        city: 'Lagos',
-        state: 'Lagos',
-        landmark: 'Opposite Eko Hotel',
-        phoneNumber: '090 3456 7890'
-      }
-    },
-    {
-      id: 4,
-      name: 'Tunde Williams',
-      phone: '070 4567 8901',
-      email: 'tunde@email.com',
-      package: 'Family Bundle',
-      status: 'reserved',
-      contributions: 2,
-      totalPaid: 30000,
-      joinedDate: 'Mar 2024',
-      deliveryMethod: 'pickup',
-      deliveryAddress: null
-    },
-    {
-      id: 5,
-      name: 'Amaka Okafor',
-      phone: '080 5678 9012',
-      email: 'amaka@email.com',
-      package: 'Basic Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 20000,
-      joinedDate: 'Jan 2024',
-      deliveryMethod: 'delivery',
-      deliveryAddress: {
-        address: '789 Lekki Phase 1',
-        city: 'Lagos',
-        state: 'Lagos',
-        landmark: 'After Lekki Toll Gate',
-        phoneNumber: '080 5678 9012'
-      }
-    },
-    {
-      id: 6,
-      name: 'Ngozi Eze',
-      phone: '081 6789 0123',
-      email: 'ngozi@email.com',
-      package: 'Premium Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 200000,
-      joinedDate: 'Jan 2024',
-      deliveryMethod: 'delivery',
-      deliveryAddress: {
-        address: '101 Ikoyi Crescent',
-        city: 'Lagos',
-        state: 'Lagos',
-        landmark: 'Near Ikoyi Club',
-        phoneNumber: '081 6789 0123'
-      }
-    },
-    {
-      id: 7,
-      name: 'Oluwaseun Balogun',
-      phone: '080 7890 1234',
-      email: 'seun@email.com',
-      package: 'Basic Bundle',
-      status: 'active',
-      contributions: 3,
-      totalPaid: 15000,
-      joinedDate: 'Feb 2024',
-      deliveryMethod: 'pickup',
-      deliveryAddress: null
-    },
-    {
-      id: 8,
-      name: 'Funmi Adeyemi',
-      phone: '081 8901 2345',
-      email: 'funmi@email.com',
-      package: 'Family Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 60000,
-      joinedDate: 'Jan 2024',
-      deliveryMethod: 'delivery',
-      deliveryAddress: {
-        address: '234 Surulere Way',
-        city: 'Lagos',
-        state: 'Lagos',
-        landmark: 'Close to National Stadium',
-        phoneNumber: '081 8901 2345'
-      }
-    },
-    {
-      id: 9,
-      name: 'Chidi Okonkwo',
-      phone: '090 9012 3456',
-      email: 'chidi@email.com',
-      package: 'Premium Bundle',
-      status: 'reserved',
-      contributions: 2,
-      totalPaid: 100000,
-      joinedDate: 'Mar 2024',
-      deliveryMethod: 'pickup',
-      deliveryAddress: null
-    },
-    {
-      id: 10,
-      name: 'Adaobi Nnamdi',
-      phone: '070 0123 4567',
-      email: 'ada@email.com',
-      package: 'Basic Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 20000,
-      joinedDate: 'Jan 2024',
-      deliveryMethod: 'delivery',
-      deliveryAddress: {
-        address: '567 Yaba Road',
-        city: 'Lagos',
-        state: 'Lagos',
-        landmark: 'Before Unilag Gate',
-        phoneNumber: '070 0123 4567'
-      }
-    }
-  ];
+  // Normalize package data for display (handle API vs static structure differences if any)
+  // Assuming API returns similar structure or we adapt here.
+  // For now, let's map essential UI fields if they differ, but based on PackagesManagement, they are similar.
+  // We might need to add fallback for gradient/shadow if API doesn't send them yet.
+  const displayPackage = {
+    ...packageData,
+    gradient: packageData.gradient || 'from-indigo-500 via-purple-500 to-pink-500',
+    shadowColor: packageData.shadow_color || 'shadow-purple-500/30',
+    monthlyAmount: Number(packageData.price) || packageData.monthlyAmount || 0,
+    yearlyTotal: (Number(packageData.price) || 0) * 12,
+    name: packageData.name,
+    description: packageData.description
+  };
 
-  // Filter users by package
-  const packageUsers = allUsers.filter(user => user.package === packageData.name);
+  const packageTransactions = transactionsData?.data?.data || transactionsData?.data || [];
+  const realTotalContributions = Array.isArray(packageTransactions) 
+    ? packageTransactions
+        .filter((t: any) => t.status === 'approved' || t.status === 'confirmed')
+        .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0)
+    : 0;
 
-  // Calculate package stats
-  const totalUsers = packageUsers.length;
-  const activeUsers = packageUsers.filter(u => u.status === 'active').length;
-  const totalContributions = packageUsers.reduce((sum, user) => sum + user.totalPaid, 0);
-  const expectedTotal = totalUsers * packageData.yearlyTotal;
-  const avgMonthsContributed = packageUsers.reduce((sum, user) => sum + user.contributions, 0) / totalUsers || 0;
-  const completionRate = (totalContributions / expectedTotal) * 100;
+  // Filter users for this package
+  const allUsers = (usersData?.data?.data || []).map((u: any) => ({
+    id: u.id,
+    name: u.name,
+    phone: u.phone,
+    email: u.email,
+    package: u.package?.name || 'No Package',
+    packageId: u.package_id?.toString(),
+    status: u.status || 'active',
+    // Calculate contributions from user data
+    contributions: u.package?.monthly_contribution 
+      ? Math.floor(Number(u.total_contribution || 0) / (Number(u.package.monthly_contribution) * (u.slots || 1))) 
+      : 0,
+    totalPaid: Number(u.total_contribution || 0),
+    joinedDate: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+    deliveryMethod: u.delivery_detail ? 'delivery' : 'pickup',
+    deliveryAddress: u.delivery_detail ? {
+      address: u.delivery_detail.street_address,
+      city: u.delivery_detail.city || u.delivery_detail.lga || '',
+      state: u.delivery_detail.state,
+      landmark: u.delivery_detail.landmark,
+      phoneNumber: u.delivery_detail.phone_number || u.phone
+    } : null
+  })).filter((u: any) => u.packageId === packageId);
+
+  // Calculate package stats from real data
+  const totalUsers = allUsers.length;
+  const activeUsers = allUsers.filter((u: any) => u.status === 'active').length;
+  
+  // Use transaction sum if available, otherwise sum from user records
+  const totalContributions = realTotalContributions > 0 
+    ? realTotalContributions 
+    : allUsers.reduce((sum: number, user: any) => sum + user.totalPaid, 0);
+  
+  const expectedTotal = allUsers.length * displayPackage.yearlyTotal; 
+  
+  const avgMonthsContributed = totalUsers > 0 
+    ? allUsers.reduce((sum: number, user: any) => sum + user.contributions, 0) / totalUsers 
+    : 0;
+    
+  const completionRate = expectedTotal > 0 ? (totalContributions / expectedTotal) * 100 : 0;
 
   // Filter logic
-  const filteredUsers = packageUsers.filter(user => {
+  const filteredUsers = allUsers.filter((user: any) => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone.includes(searchTerm) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -247,20 +156,20 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
       </button>
 
       {/* Package Header */}
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${packageData.gradient} p-8 shadow-xl ${packageData.shadowColor}`}>
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${displayPackage.gradient} p-8 shadow-xl ${displayPackage.shadowColor}`}>
         <div className="relative z-10">
           <div className="flex items-start justify-between mb-4">
             <div>
-              {packageData.badge && (
+              {displayPackage.badge && (
                 <div className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white mb-3">
-                  {packageData.badge}
+                  {displayPackage.badge}
                 </div>
               )}
-              <h1 className="text-3xl font-bold text-white mb-2">{packageData.name}</h1>
-              <p className="text-white/90 text-lg">₦{packageData.monthlyAmount.toLocaleString()}/month</p>
+              <h1 className="text-3xl font-bold text-white mb-2">{displayPackage.name}</h1>
+              <p className="text-white/90 text-lg">₦{displayPackage.monthlyAmount.toLocaleString()}/month</p>
             </div>
           </div>
-          <p className="text-white/80 max-w-2xl">{packageData.description}</p>
+          <p className="text-white/80 max-w-2xl">{displayPackage.description}</p>
         </div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
       </div>
@@ -269,7 +178,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-0 shadow-lg">
           <div className="flex items-start justify-between mb-4">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${packageData.gradient} flex items-center justify-center shadow-lg ${packageData.shadowColor}`}>
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${displayPackage.gradient} flex items-center justify-center shadow-lg ${displayPackage.shadowColor}`}>
               <Users className="w-6 h-6 text-white" />
             </div>
           </div>
@@ -379,7 +288,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
         {/* Table */}
         {/* Mobile: Stacked cards */}
         <div className="lg:hidden space-y-3 mb-6">
-          {filteredUsers.map((user) => (
+          {filteredUsers.map((user: any) => (
             <div key={user.id} className="p-4 bg-slate-50 rounded-xl border border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -457,7 +366,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
+              {filteredUsers.map((user: any) => (
                 <tr key={user.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
                   <td className="py-4 px-4">
                     <div>
@@ -504,7 +413,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                   </td>
                   <td className="py-4 px-4">
                     <p className="font-semibold text-gray-900">₦{user.totalPaid.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">of ₦{packageData.yearlyTotal.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">of ₦{displayPackage.yearlyTotal.toLocaleString()}</p>
                   </td>
                   <td className="py-4 px-4">
                     <p className="text-sm text-gray-600">{user.joinedDate}</p>
@@ -638,7 +547,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${packageData.gradient} flex items-center justify-center shadow-lg ${packageData.shadowColor}`}>
+                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${displayPackage.gradient} flex items-center justify-center shadow-lg ${displayPackage.shadowColor}`}>
                   <span className="text-white text-xl font-bold">{viewingUser.name.split(' ').map((n: string) => n[0]).join('')}</span>
                 </div>
                 <div>
@@ -660,7 +569,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                 {/* Contact Information */}
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${packageData.gradient} flex items-center justify-center`}>
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${displayPackage.gradient} flex items-center justify-center`}>
                       <span className="text-white text-sm">👤</span>
                     </div>
                     Contact Information
@@ -688,7 +597,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-4 bg-slate-50 rounded-xl">
                       <p className="text-xs text-gray-500 mb-1">Package</p>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${packageData.gradient} text-white`}>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${displayPackage.gradient} text-white`}>
                         {viewingUser.package}
                       </span>
                     </div>
@@ -725,7 +634,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                     <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                       <p className="text-xs text-emerald-700 mb-1">Total Paid</p>
                       <p className="text-2xl font-bold text-emerald-900">₦{viewingUser.totalPaid.toLocaleString()}</p>
-                      <p className="text-xs text-emerald-600 mt-1">of ₦{packageData.yearlyTotal.toLocaleString()}</p>
+                      <p className="text-xs text-emerald-600 mt-1">of ₦{displayPackage.yearlyTotal.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>

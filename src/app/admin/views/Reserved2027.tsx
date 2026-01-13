@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Search, Filter, Eye, Edit, CheckCircle, Calendar, Plus, Download, X, MapPin, Save } from 'lucide-react';
+import { Search, Filter, Eye, Edit, Calendar, Plus, Download, X, MapPin, Save, CheckCircle2 } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
+import { admin } from '../../../lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface ReservedUser {
   id: number;
@@ -9,11 +12,17 @@ interface ReservedUser {
   phone: string;
   email: string;
   package: string;
+  packageId?: string | number;
   reservationDate: string;
   deliveryType?: 'pickup' | 'delivery';
+  delivery_method?: string;
+  street_address?: string;
+  state?: string;
+  city?: string;
   deliveryAddress?: string;
   deliveryState?: string;
   deliveryLga?: string;
+  status?: string;
 }
 
 const nigerianStates = [
@@ -25,55 +34,95 @@ const nigerianStates = [
 ];
 
 export function Reserved2027() {
+  const nextYear = new Date().getFullYear() + 1;
+  const queryClient = useQueryClient();
+  
+  const { data: usersData, isLoading: isUsersLoading } = useQuery({
+    queryKey: ['adminReservedUsers'],
+    queryFn: admin.getReservedUsers,
+  });
+
+  const { data: packagesData } = useQuery({
+    queryKey: ['adminPackages'],
+    queryFn: admin.getPackages,
+  });
+
+  const packages = packagesData?.data?.data || packagesData?.data || [];
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPackage, setFilterPackage] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<ReservedUser | null>(null);
   const [viewingUser, setViewingUser] = useState<ReservedUser | null>(null);
+  const [confirmActivationUser, setConfirmActivationUser] = useState<ReservedUser | null>(null);
+  
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     password: '',
-    package: 'Basic Bundle',
-    deliveryType: 'pickup' as 'pickup' | 'delivery',
-    deliveryAddress: '',
-    deliveryState: '',
-    deliveryLga: ''
+    package: packages.length > 0 ? packages[0].name : 'Basic Bundle',
+    package_id: packages.length > 0 ? packages[0].id : '',
+    status: 'reserved'
   });
 
-  const [reservedUsers, setReservedUsers] = useState<ReservedUser[]>([
-    {
-      id: 1,
-      name: 'Tunde Williams',
-      phone: '070 4567 8901',
-      email: 'tunde@email.com',
-      package: 'Family Bundle',
-      reservationDate: 'Jan 15, 2025',
-      deliveryType: 'pickup'
+  const reservedUsers: ReservedUser[] = Array.isArray(usersData?.data) 
+    ? usersData.data.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      phone: u.phone,
+      email: u.email,
+      package: u.package?.name || 'No Package',
+      packageId: u.package_id || u.package?.id,
+      reservationDate: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      deliveryType: (u.delivery_detail?.type === 'delivery' || u.delivery_method === 'delivery') ? 'delivery' : 'pickup',
+      deliveryAddress: u.delivery_detail?.street_address || u.street_address || '',
+      deliveryState: u.delivery_detail?.state || u.state || '',
+      deliveryLga: u.delivery_detail?.city || u.city || ''
+    }))
+    : (usersData?.data?.data || []).map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      phone: u.phone,
+      email: u.email,
+      package: u.package?.name || 'No Package',
+      packageId: u.package_id || u.package?.id,
+      reservationDate: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      deliveryType: (u.delivery_detail?.type === 'delivery' || u.delivery_method === 'delivery') ? 'delivery' : 'pickup',
+      deliveryAddress: u.delivery_detail?.street_address || u.street_address || '',
+      deliveryState: u.delivery_detail?.state || u.state || '',
+      deliveryLga: u.delivery_detail?.city || u.city || ''
+    }));
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => admin.createUser({ ...data, status: 'reserved' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReservedUsers'] });
+      toast.success('Reservation added successfully');
+      setShowModal(false);
     },
-    {
-      id: 2,
-      name: 'Folake Adeyemi',
-      phone: '080 9876 5432',
-      email: 'folake@email.com',
-      package: 'Premium Bundle',
-      reservationDate: 'Jan 20, 2025',
-      deliveryType: 'delivery',
-      deliveryAddress: '10 Lekki Phase 1',
-      deliveryState: 'Lagos',
-      deliveryLga: 'Eti-Osa'
-    },
-    {
-      id: 3,
-      name: 'Ibrahim Yusuf',
-      phone: '081 2468 1357',
-      email: 'ibrahim@email.com',
-      package: 'Basic Bundle',
-      reservationDate: 'Feb 5, 2025',
-      deliveryType: 'pickup'
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to add reservation');
     }
-  ]);
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: number, data: any }) => {
+      const payload = { ...data.data };
+      if (!payload.password) {
+        delete payload.password;
+      }
+      return admin.updateUser(data.id, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReservedUsers'] });
+      toast.success('Reservation updated successfully');
+      setShowModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update reservation');
+    }
+  });
 
   const getPackageBadge = (packageName: string) => {
     const colors = {
@@ -83,6 +132,17 @@ export function Reserved2027() {
     };
     return colors[packageName as keyof typeof colors] || 'bg-gray-100 text-gray-700';
   };
+
+  const filteredUsers = reservedUsers.filter(user => {
+    const matchesSearch = searchTerm === '' || 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone.includes(searchTerm) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesPackage = filterPackage === 'all' || user.package === filterPackage;
+    
+    return matchesSearch && matchesPackage;
+  });
 
   const handleExport = () => {
     const headers = ['Name', 'Phone', 'Email', 'Package', 'Reservation Date'];
@@ -97,33 +157,32 @@ export function Reserved2027() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reserved-2027-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `reserved-${nextYear}-export-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const filteredUsers = reservedUsers.filter(user => {
-    const matchesSearch = searchTerm === '' || 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesPackage = filterPackage === 'all' || user.package === filterPackage;
-    
-    return matchesSearch && matchesPackage;
-  });
+  // ... handlers ...
+  const handlePackageChange = (e: any) => {
+    const selectedPkg = packages.find((p: any) => p.id == e.target.value);
+    setFormData({ 
+      ...formData, 
+      package_id: e.target.value,
+      package: selectedPkg?.name || 'Basic Bundle'
+    });
+  };
 
   const handleAddUser = () => {
+    // Default to first package if available
+    const firstPkg = packages[0];
     setFormData({
       name: '',
       phone: '',
       email: '',
       password: '',
-      package: 'Basic Bundle',
-      deliveryType: 'pickup' as 'pickup' | 'delivery',
-      deliveryAddress: '',
-      deliveryState: '',
-      deliveryLga: ''
+      package: firstPkg?.name || 'Basic Bundle',
+      package_id: firstPkg?.id || '',
+      status: 'reserved'
     });
     setEditingUser(null);
     setShowModal(true);
@@ -136,13 +195,27 @@ export function Reserved2027() {
       email: user.email,
       password: '',
       package: user.package,
-      deliveryType: user.deliveryType || 'pickup' as 'pickup' | 'delivery',
-      deliveryAddress: user.deliveryAddress || '',
-      deliveryState: user.deliveryState || '',
-      deliveryLga: user.deliveryLga || ''
+      package_id: user.packageId || '',
+      status: user.status || 'reserved'
     });
     setEditingUser(user);
     setShowModal(true);
+  };
+
+  const handleActivateUser = (user: ReservedUser) => {
+    setConfirmActivationUser(user);
+  };
+
+  const handleConfirmActivation = () => {
+    if (confirmActivationUser) {
+      updateMutation.mutate({
+        id: confirmActivationUser.id,
+        data: {
+          status: 'active'
+        }
+      });
+      setConfirmActivationUser(null);
+    }
   };
 
   const handleViewUser = (user: ReservedUser) => {
@@ -151,20 +224,48 @@ export function Reserved2027() {
   };
 
   const handleSaveUser = () => {
+    // Basic mapping of package name to ID for the API (if needed)
+    // Ideally we should use package ID in the form, similar to UsersManagement
+    // For now, assuming backend might handle name or we should map it.
+    // Let's rely on UsersManagement approach: form should use package_id.
+    // But this file uses package name strings in formData. 
+    // I will stick to what UsersManagement did: using package_id.
+    
+    // NOTE: Refactoring formData to use package_id is better, but to minimize diffs 
+    // and since I don't have the packages list fetched here yet, I'll fetch packages too.
+    
+    // Actually, I'll quickly check if I can just pass the package ID.
+    // The current formData has 'package' string. I should change it to package_id.
+    // But wait, the replaced code is already simpler. I will assume I need to fetch packages to get IDs.
+    
+    // Let's create the payload.
+    // I need to fetch packages to map the selected name back to an ID? 
+    // Or simpler: Update the form to use package_id like UsersManagement.
+    // For this step, I'll assume the form inputs will be updated in a subsequent step or I need to do it now.
+    
+    // I'll do it right now in the *next* tool call for the imports and form structure.
+    // This tool call just replaces the state/handlers logic.
+    
+    // WAIT: I cannot access 'packages' here yet.
+    // I should probably pass 'package_id' in formData.
+    
+    // Let's proceed with this replacement which sets up the hooks, 
+    // and I'll clean up the form logic in the next step.
+    
     if (editingUser) {
-      const updatedUsers = reservedUsers.map(user => 
-        user.id === editingUser.id ? { ...user, ...formData } : user
-      );
-      setReservedUsers(updatedUsers);
+        updateMutation.mutate({
+            id: editingUser.id,
+            data: {
+                ...formData,
+                // Make sure to map package name to ID or use ID if I change the form
+                // For now, sending as is, but I will fix the form in next step
+            }
+        });
     } else {
-      const newUser: ReservedUser = {
-        id: reservedUsers.length + 1,
-        ...formData,
-        reservationDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      };
-      setReservedUsers([...reservedUsers, newUser]);
+        createMutation.mutate({
+            ...formData,
+        });
     }
-    setShowModal(false);
   };
 
   return (
@@ -172,7 +273,7 @@ export function Reserved2027() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reserved for 2027</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Reserved for {nextYear}</h1>
           <p className="text-gray-500 mt-1">{filteredUsers.length} users reserved for next year</p>
         </div>
         <div className="flex gap-2">
@@ -199,9 +300,9 @@ export function Reserved2027() {
             <Calendar className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-1">2027 Reservations</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">{nextYear} Reservations</h3>
             <p className="text-sm text-gray-600">
-              Users listed here have reserved their spots for the 2027 cycle. They will begin making contributions in January 2027.
+              Users listed here have reserved their spots for the {nextYear} cycle. They will begin making contributions in January {nextYear}.
             </p>
           </div>
         </div>
@@ -295,6 +396,13 @@ export function Reserved2027() {
                 >
                   Edit
                 </button>
+                <button 
+                  onClick={() => handleActivateUser(user)}
+                  className="flex-1 text-xs px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors font-medium flex items-center justify-center gap-1"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Activate
+                </button>
               </div>
             </div>
           ))}
@@ -359,6 +467,13 @@ export function Reserved2027() {
                         className="p-2 text-gray-600 hover:bg-slate-100 rounded-lg transition-colors"
                       >
                         <Edit className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleActivateUser(user)}
+                        title="Activate User"
+                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -464,76 +579,43 @@ export function Reserved2027() {
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">Package</label>
                     <select
-                      value={formData.package}
-                      onChange={(e) => setFormData({ ...formData, package: e.target.value })}
+                      value={formData.package_id}
+                      onChange={handlePackageChange}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
                     >
-                      <option value="Basic Bundle">Basic Bundle</option>
-                      <option value="Family Bundle">Family Bundle</option>
-                      <option value="Premium Bundle">Premium Bundle</option>
+                      <option value="">Select Package</option>
+                      {packages.map((pkg: any) => (
+                        <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                      <MapPin className="w-4 h-4 text-white" />
-                    </div>
-                    Delivery Information
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">Delivery Type</label>
-                      <select
-                        value={formData.deliveryType}
-                        onChange={(e) => setFormData({ ...formData, deliveryType: e.target.value as 'pickup' | 'delivery' })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
-                      >
-                        <option value="pickup">Pickup at Collection Point</option>
-                        <option value="delivery">Home Delivery</option>
-                      </select>
-                    </div>
-                    
-                    {formData.deliveryType === 'delivery' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-semibold text-gray-900 mb-2">Delivery Address</label>
-                          <input
-                            type="text"
-                            placeholder="Enter street address"
-                            value={formData.deliveryAddress}
-                            onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-900 mb-2">State</label>
-                          <select
-                            value={formData.deliveryState}
-                            onChange={(e) => setFormData({ ...formData, deliveryState: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
-                          >
-                            <option value="">Select State</option>
-                            {nigerianStates.map(state => (
-                              <option key={state} value={state}>{state}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-900 mb-2">LGA</label>
-                          <input
-                            type="text"
-                            placeholder="Enter LGA"
-                            value={formData.deliveryLga}
-                            onChange={(e) => setFormData({ ...formData, deliveryLga: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
+                {/* Status Field */}
+                {editingUser && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-slate-500 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-white" />
                       </div>
-                    )}
+                      Account Status
+                    </h3>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
+                      >
+                        <option value="reserved">Reserved</option>
+                        <option value="active">Active</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Changing status to "Active" will move this user to the main Users Management list.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -642,7 +724,7 @@ export function Reserved2027() {
                       </>
                     )}
                   </div>
-                </div>
+              </div>
               </div>
             </div>
 
@@ -663,6 +745,38 @@ export function Reserved2027() {
                   Edit Reservation
                 </span>
               </GradientButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmActivationUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Activate User?</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to activate <span className="font-semibold text-gray-900">{confirmActivationUser.name}</span>? 
+              This will move them from the reserved list to the active users list.
+            </p>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setConfirmActivationUser(null)}
+                className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmActivation}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-lg shadow-emerald-500/30"
+              >
+                Confirm Activation
+              </button>
             </div>
           </div>
         </div>

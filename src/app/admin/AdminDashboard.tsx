@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { LayoutDashboard, Users, Package, Megaphone, Menu, X, LogOut, Calendar } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { DashboardOverview } from './views/DashboardOverview';
@@ -16,7 +16,7 @@ interface AdminDashboardProps {
 const navItems = [
   { id: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { id: '/admin/dashboard/users', label: 'Users', icon: Users },
-  { id: '/admin/dashboard/reserved2027', label: 'Reserved for 2027', icon: Calendar },
+  { id: '/admin/dashboard/reserved2027', label: `Reserved for ${new Date().getFullYear() + 1}`, icon: Calendar },
   { id: '/admin/dashboard/packages', label: 'Packages', icon: Package },
   { id: '/admin/dashboard/announcements', label: 'Announcements', icon: Megaphone },
 ] as const;
@@ -40,9 +40,9 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="h-screen bg-slate-50 flex overflow-hidden">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-white border-r border-gray-200">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-white border-r border-gray-200 h-full flex-shrink-0">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
@@ -97,7 +97,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
       {/* Sidebar - Mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 lg:hidden flex flex-col h-full ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -152,9 +152,9 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-screen">
+      <main className="flex-1 flex flex-col h-full overflow-hidden w-full relative">
         {/* Top Bar */}
-        <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 sticky top-0 z-30">
+        <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex-shrink-0 z-30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
@@ -188,7 +188,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
+        <div className="flex-1 p-4 lg:p-8 overflow-y-auto scrollbar-hide">
           <Routes>
             <Route index element={
               <DashboardOverview onPackageClick={(packageId) => {

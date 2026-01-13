@@ -4,14 +4,16 @@ import { StatusBadge } from './StatusBadge';
 import { useState } from 'react';
 
 interface Transaction {
-  month: string;
-  amount: number;
+  month?: string;
+  amount: number | string;
   status: string;
-  date: string;
-  transactionId: string;
-  paymentMethod: string;
-  reference: string;
-  time: string;
+  date?: string;
+  transactionId?: string;
+  transaction_id?: string;
+  paymentMethod?: string;
+  reference?: string;
+  time?: string;
+  created_at?: string;
 }
 
 interface TransactionDrawerProps {
@@ -131,7 +133,7 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
                     <Clock className="w-8 h-8 text-white" />
                   )}
                 </div>
-                <StatusBadge status={selectedTransaction.status} />
+                <StatusBadge status={selectedTransaction.status as any} />
                 <h3 className="text-3xl font-bold text-gray-900 mt-3 mb-1">
                   ₦{selectedTransaction.amount.toLocaleString()}
                 </h3>
@@ -151,10 +153,10 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
                     </p>
                   </div>
                   <button
-                    onClick={() => handleCopyId(selectedTransaction.transactionId)}
+                    onClick={() => handleCopyId(selectedTransaction.transactionId || selectedTransaction.transaction_id || selectedTransaction.reference || '')}
                     className="w-8 h-8 rounded-lg bg-purple-50 hover:bg-purple-100 flex items-center justify-center transition-colors active:scale-95 flex-shrink-0"
                   >
-                    {copiedId === selectedTransaction.transactionId ? (
+                    {copiedId === (selectedTransaction.transactionId || selectedTransaction.transaction_id || selectedTransaction.reference) ? (
                       <CheckCircle className="w-4 h-4 text-emerald-600" />
                     ) : (
                       <Copy className="w-4 h-4 text-purple-600" />
@@ -203,7 +205,14 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
           ) : (
             // Transaction List View
             <div className="space-y-3">
-              {transactions.map((transaction, index) => (
+              {transactions.map((transaction, index) => {
+                // Safely derive month if not present
+                const txDate = transaction.date ? new Date(transaction.date) : (transaction.created_at ? new Date(transaction.created_at) : new Date());
+                const monthName = txDate.toLocaleString('default', { month: 'long' });
+                const shortMonth = monthName.substring(0, 3).toUpperCase();
+                const displayDate = transaction.date || (transaction.created_at ? new Date(transaction.created_at).toLocaleDateString() : 'Unknown Date');
+
+                return (
                 <button
                   key={index}
                   onClick={() => handleTransactionClick(transaction)}
@@ -213,33 +222,33 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-md ${
-                          transaction.status === 'confirmed'
+                          transaction.status === 'confirmed' || transaction.status === 'approved' || transaction.status === 'success'
                             ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-emerald-500/30'
-                            : transaction.status === 'declined'
+                            : transaction.status === 'declined' || transaction.status === 'failed'
                             ? 'bg-gradient-to-br from-red-400 to-rose-500 text-white shadow-red-500/30'
                             : 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-orange-500/30'
                         }`}>
-                          {transaction.month.substring(0, 3).toUpperCase()}
+                          {shortMonth}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{transaction.month} 2024</p>
-                          <p className="text-sm text-gray-500">{transaction.date}</p>
+                          <p className="font-semibold text-gray-900">{monthName} {txDate.getFullYear()}</p>
+                          <p className="text-sm text-gray-500">{displayDate}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-900 mb-1">₦{transaction.amount.toLocaleString()}</p>
-                        <StatusBadge status={transaction.status} />
+                        <p className="font-bold text-gray-900 mb-1">₦{Number(transaction.amount).toLocaleString()}</p>
+                        <StatusBadge status={transaction.status as any} />
                       </div>
                     </div>
                     <div className="pt-3 border-t border-gray-100">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500">Transaction ID</span>
-                        <span className="text-xs font-mono font-semibold text-gray-900">{transaction.transactionId}</span>
+                        <span className="text-xs font-mono font-semibold text-gray-900">{transaction.transactionId || transaction.transaction_id || transaction.reference}</span>
                       </div>
                     </div>
                   </Card>
                 </button>
-              ))}
+              )})}
             </div>
           )}
         </div>

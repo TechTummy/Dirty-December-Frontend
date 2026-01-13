@@ -5,28 +5,98 @@ import { GradientButton } from '../../components/GradientButton';
 import { packages as initialPackages, Package } from '../../data/packages';
 import { EditPackageModal } from '../components/EditPackageModal';
 
+import { admin } from '../../../lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
 export function PackagesManagement() {
-  const [packages, setPackages] = useState<Package[]>(initialPackages);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [viewingPackage, setViewingPackage] = useState<Package | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: packagesData, isLoading } = useQuery({
+    queryKey: ['adminPackages'],
+    queryFn: admin.getPackages,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: admin.createPackage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminPackages'] });
+      toast.success('Package created successfully');
+      setShowAddModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to create package');
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => admin.updatePackage(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminPackages'] });
+      toast.success('Package updated successfully');
+      setEditingPackage(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update package');
+    }
+  });
+
+  const rawPackages = Array.isArray(packagesData?.data) 
+    ? packagesData.data 
+    : (packagesData?.data?.data || []);
+
+  const packages: Package[] = rawPackages.map((p: any) => {
+    // Find matching frontend definition for design assets (gradients, etc)
+    const frontendPkg = initialPackages.find(ip => ip.id === p.name.toLowerCase().replace(' ', '-')) 
+                     || initialPackages.find(ip => ip.name === p.name)
+                     || initialPackages[0];
+
+    return {
+      ...frontendPkg,
+      id: p.id.toString(), // Ensure ID is string if frontend expects string
+      name: p.name,
+      description: p.description,
+      monthlyAmount: Number(p.monthly_contribution),
+      yearlyTotal: Number(p.yearly_contribution),
+      estimatedRetailValue: Number(p.package_worth),
+      savingsPercent: Number(p.savings_percentage),
+      benefits: p.benefits || [],
+      detailedBenefits: [], // If API provides detailed breakdown, map it here
+      badge: p.badge,
+    };
+  });
 
   const handleSavePackage = (updatedPackage: Package) => {
-    const existingIndex = packages.findIndex(pkg => pkg.id === updatedPackage.id);
-    
-    if (existingIndex >= 0) {
-      // Update existing package
-      setPackages(packages.map(pkg => 
-        pkg.id === updatedPackage.id ? updatedPackage : pkg
-      ));
+    const payload = {
+      name: updatedPackage.name,
+      description: updatedPackage.description,
+      monthly_contribution: updatedPackage.monthlyAmount,
+      yearly_contribution: updatedPackage.yearlyTotal,
+      package_worth: updatedPackage.estimatedRetailValue,
+      savings_percentage: updatedPackage.savingsPercent,
+      benefits: updatedPackage.benefits,
+      badge: updatedPackage.badge,
+      // Default to active for now
+      is_active: true
+    };
+
+    if (editingPackage) {
+      updateMutation.mutate({ id: editingPackage.id, data: payload });
     } else {
-      // Add new package
-      setPackages([...packages, updatedPackage]);
+      createMutation.mutate(payload);
     }
-    
-    setEditingPackage(null);
-    setShowAddModal(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

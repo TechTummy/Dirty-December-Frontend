@@ -130,3 +130,7 @@ dist
 .DS_Store
 .AppleDouble
 .LSOverride
+API_DOCUMENTATION_detailed.md
+API_DOCUMENTATION_updated.md
+API_DOCUMENTATION.md
+API_DOCUMENTATION_latest.md

@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Search, Filter, Eye, Ban, CheckCircle, Clock, Plus, Download, X, MapPin, Save } from 'lucide-react';
+import { Search, Filter, Eye, CheckCircle, Clock, Download, X, MapPin, Save, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
+import { admin } from '../../../lib/api';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 interface User {
   id: number;
@@ -14,19 +16,18 @@ interface User {
   totalPaid: number;
   joinedDate: string;
   deliveryType?: 'pickup' | 'delivery';
+  delivery_method?: string;
+  street_address?: string;
+  state?: string;
+  city?: string;
   deliveryAddress?: string;
   deliveryState?: string;
   deliveryLga?: string;
-  quantity?: number; // Number of slots the user is paying for
+  quantity?: number;
+  packageId?: string | number;
 }
 
-const nigerianStates = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
-  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
-  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa',
-  'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba',
-  'Yobe', 'Zamfara'
-];
+
 
 export function UsersManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,93 +41,106 @@ export function UsersManagement() {
     phone: '',
     email: '',
     password: '',
-    package: 'Basic Bundle',
+    package_id: '' as string | number,
     status: 'active',
-    deliveryType: 'pickup' as 'pickup' | 'delivery',
-    deliveryAddress: '',
-    deliveryState: '',
-    deliveryLga: '',
     quantity: 1
   });
 
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      name: 'Chioma Adebayo',
-      phone: '080 1234 5678',
-      email: 'chioma@email.com',
-      package: 'Family Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 60000,
-      joinedDate: 'Jan 2024',
-      deliveryType: 'delivery',
-      deliveryAddress: '15 Allen Avenue',
-      deliveryState: 'Lagos',
-      deliveryLga: 'Ikeja',
-      quantity: 3 // Contributing for 3 people
+  const { data: usersData, isLoading, refetch } = useQuery({
+    queryKey: ['adminUsers'],
+    queryFn: admin.getUsers,
+  });
+
+  const { data: packagesData } = useQuery({
+    queryKey: ['adminPackages'],
+    queryFn: admin.getPackages,
+  });
+
+  const packages = packagesData?.data?.data || packagesData?.data || [];
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => admin.createUser({
+      ...data,
+      slots: data.quantity
+    }),
+    onSuccess: () => {
+      // toast.success('User created successfully'); // Toast not imported?
+      refetch();
     },
-    {
-      id: 2,
-      name: 'Emeka Johnson',
-      phone: '081 2345 6789',
-      email: 'emeka@email.com',
-      package: 'Basic Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 20000,
-      joinedDate: 'Jan 2024',
-      quantity: 1 // Contributing for 1 person
-    },
-    {
-      id: 3,
-      name: 'Blessing Okeke',
-      phone: '090 3456 7890',
-      email: 'blessing@email.com',
-      package: 'Premium Bundle',
-      status: 'active',
-      contributions: 3,
-      totalPaid: 150000,
-      joinedDate: 'Feb 2024',
-      quantity: 1 // Contributing for 1 person
-    },
-    {
-      id: 4,
-      name: 'Tunde Williams',
-      phone: '070 4567 8901',
-      email: 'tunde@email.com',
-      package: 'Family Bundle',
-      status: 'reserved',
-      contributions: 2,
-      totalPaid: 30000,
-      joinedDate: 'Mar 2024',
-      quantity: 2 // Contributing for 2 people
-    },
-    {
-      id: 5,
-      name: 'Amaka Okafor',
-      phone: '080 5678 9012',
-      email: 'amaka@email.com',
-      package: 'Basic Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 20000,
-      joinedDate: 'Jan 2024',
-      quantity: 1 // Contributing for 1 person
-    },
-    {
-      id: 6,
-      name: 'Ngozi Eze',
-      phone: '081 6789 0123',
-      email: 'ngozi@email.com',
-      package: 'Premium Bundle',
-      status: 'active',
-      contributions: 4,
-      totalPaid: 200000,
-      joinedDate: 'Jan 2024',
-      quantity: 1 // Contributing for 1 person
+    onError: (error: any) => {
+      // toast.error(error.message);
+      console.error(error);
+      alert('Failed to create user. Please try again.');
     }
-  ]);
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: number, data: any }) => {
+      const payload = {
+        ...data.data,
+        slots: data.data.quantity
+      };
+      // Only include password if it's been set (non-empty)
+      if (!payload.password) {
+        delete payload.password;
+      }
+      return admin.updateUser(data.id, payload);
+    },
+    onSuccess: () => {
+      refetch();
+    },
+    onError: (error: any) => {
+      console.error(error);
+      alert('Failed to update user. Please try again.');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: admin.deleteUser,
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  // API returns paginated response: { data: { data: [...] } }
+  // or sometimes non-paginated: { data: [...] }
+  const rawUsers = Array.isArray(usersData?.data) 
+    ? usersData.data 
+    : (usersData?.data?.data || []);
+
+  const users: User[] = rawUsers.map((u: any) => {
+    // Parse amounts (API returns strings like "5000.00")
+    const monthlyContribution = Number(u.package?.monthly_contribution || 5000);
+    const totalContribution = Number(u.total_contribution || 0);
+    const slots = u.slots || 1;
+    
+    // Calculate contributions count based on amount paid vs monthly expectation (considering slots)
+    // E.g. Paid 500k, Monthly 50k, 5 slots => 500k / (50k * 5) = 2 months
+    const monthlyTotalExpected = monthlyContribution * slots;
+    const contributionsCount = monthlyTotalExpected > 0 
+      ? Math.floor(totalContribution / monthlyTotalExpected) 
+      : 0;
+
+    return {
+      id: u.id,
+      name: u.name,
+      phone: u.phone,
+      email: u.email,
+      package: u.package?.name || 'No Package',
+      packageId: u.package_id || u.package?.id,
+      status: u.status || 'active', 
+      contributions: contributionsCount,
+      totalPaid: totalContribution,
+      joinedDate: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      quantity: u.slots || 1,
+      // Update mapping to use delivery_detail instead of delivery_settings
+      // Update mapping to use delivery_detail or delivery_method directly
+      deliveryType: (u.delivery_detail?.type === 'delivery' || u.delivery_method === 'delivery') ? 'delivery' : 'pickup', 
+      deliveryAddress: u.delivery_detail?.street_address || u.street_address || '',
+      deliveryState: u.delivery_detail?.state || u.state || '',
+      deliveryLga: u.delivery_detail?.city || u.city || '' // API docs/response show 'city' in delivery_detail, mapped to LGA for now or City
+    };
+  });
 
   const getStatusBadge = (status: string) => {
     if (status === 'active') {
@@ -134,6 +148,13 @@ export function UsersManagement() {
         <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
           <CheckCircle className="w-3 h-3" />
           Active
+        </span>
+      );
+    } else if (status === 'suspended') {
+      return (
+        <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+          <X className="w-3 h-3" />
+          Suspended
         </span>
       );
     }
@@ -193,12 +214,8 @@ export function UsersManagement() {
       phone: '',
       email: '',
       password: '',
-      package: 'Basic Bundle',
+      package_id: packages[0]?.id || '', // Default to first package ID
       status: 'active',
-      deliveryType: 'pickup' as 'pickup' | 'delivery',
-      deliveryAddress: '',
-      deliveryState: '',
-      deliveryLga: '',
       quantity: 1 // Default quantity
     });
     setEditingUser(null);
@@ -211,12 +228,8 @@ export function UsersManagement() {
       phone: user.phone,
       email: user.email,
       password: '',
-      package: user.package,
+      package_id: user.packageId || '',
       status: user.status,
-      deliveryType: user.deliveryType || 'pickup' as 'pickup' | 'delivery',
-      deliveryAddress: user.deliveryAddress || '',
-      deliveryState: user.deliveryState || '',
-      deliveryLga: user.deliveryLga || '',
       quantity: user.quantity || 1 // Default quantity
     });
     setEditingUser(user);
@@ -230,27 +243,29 @@ export function UsersManagement() {
 
   const handleSaveUser = () => {
     if (editingUser) {
-      const updatedUsers = users.map(user => 
-        user.id === editingUser.id ? { ...user, ...formData } : user
-      );
-      setUsers(updatedUsers);
+        updateMutation.mutate({
+            id: editingUser.id,
+            data: formData
+        });
     } else {
-      const newUser: User = {
-        id: users.length + 1,
-        ...formData,
-        contributions: 0,
-        totalPaid: 0,
-        joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-      };
-      setUsers([...users, newUser]);
+        createMutation.mutate(formData);
     }
     setShowModal(false);
   };
 
   const handleDeleteUser = (userId: number) => {
-    const updatedUsers = users.filter(user => user.id !== userId);
-    setUsers(updatedUsers);
+    if (confirm('Are you sure you want to delete this user?')) {
+        deleteMutation.mutate(userId);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -276,7 +291,7 @@ export function UsersManagement() {
           </GradientButton>
         </div>
       </div>
-
+      
       {/* Filters & View Toggle */}
       <Card className="border-0 shadow-lg">
         <div className="space-y-4">
@@ -340,37 +355,64 @@ export function UsersManagement() {
       {/* Table View */}
       <Card className="border-0 shadow-lg overflow-hidden">
         {/* Mobile: Stacked table cards */}
-        <div className="lg:hidden space-y-3">
+        <div className="lg:hidden space-y-4 p-4 bg-slate-50/50">
           {filteredUsers.map((user) => (
-            <div key={user.id} className="p-4 bg-slate-50 rounded-lg border border-gray-200">
-              <div className="flex items-center justify-between mb-3">
+            <div key={user.id} className="p-5 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/30">
-                    <span className="text-white font-bold text-sm">{user.name.split(' ').map(n => n[0]).join('')}</span>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/20">
+                    <span className="text-white font-bold text-lg">{user.name.split(' ').map(n => n[0]).join('')}</span>
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-sm">{user.name}</h3>
-                    <p className="text-xs text-gray-500">{user.phone}</p>
+                    <h3 className="font-bold text-gray-900">{user.name}</h3>
+                    <p className="text-sm text-gray-500">{user.phone}</p>
                   </div>
                 </div>
                 {getStatusBadge(user.status)}
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-gray-500">Package: </span>
-                  <span className="font-medium text-gray-900">{user.package}</span>
+              
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Package</span>
+                  <span className="font-medium text-gray-900">{user.package} ({user.quantity} slots)</span>
                 </div>
-                <div>
-                  <span className="text-gray-500">Paid: </span>
-                  <span className="font-medium text-emerald-600">₦{user.totalPaid.toLocaleString()}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Total Paid</span>
+                  <span className="font-bold text-emerald-600">₦{user.totalPaid.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Progress</span>
+                  <span className="font-medium text-gray-700">{user.contributions}/12 months</span>
+                </div>
+                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+                    style={{ width: `${Math.min((user.contributions / 12) * 100, 100)}%` }}
+                  />
                 </div>
               </div>
-              <div className="flex gap-2 mt-3">
+
+              <div className="flex items-center gap-2 pt-4 border-t border-gray-50">
                 <button 
                   onClick={() => handleViewUser(user)}
-                  className="flex-1 text-xs px-3 py-1.5 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition-colors font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
                 >
+                  <Eye className="w-4 h-4" />
                   View
+                </button>
+                <button 
+                  onClick={() => handleEditUser(user)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit
+                </button>
+                <button 
+                  onClick={() => handleDeleteUser(user.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
                 </button>
               </div>
             </div>
@@ -401,49 +443,66 @@ export function UsersManagement() {
                         <span className="text-white font-bold text-sm">{user.name.split(' ').map(n => n[0]).join('')}</span>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 text-sm">{user.name}</p>
+                        <p className="font-semibold text-gray-900 text-sm whitespace-nowrap">{user.name}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm text-gray-600">{user.phone}</p>
+                    <p className="text-sm text-gray-600 whitespace-nowrap">{user.phone}</p>
                     <p className="text-xs text-gray-400">{user.email}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPackageBadge(user.package)}`}>
-                      {user.package}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-block w-fit px-2 py-1 rounded-full text-xs font-medium ${getPackageBadge(user.package)}`}>
+                        {user.package}
+                      </span>
+                      {user.quantity && user.quantity > 1 && (
+                        <span className="text-xs text-gray-500 font-medium">{user.quantity} slots</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     {getStatusBadge(user.status)}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="flex items-center gap-2 min-w-[120px]">
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all"
-                          style={{ width: `${(user.contributions / 12) * 100}%` }}
+                          style={{ width: `${Math.min((user.contributions / 12) * 100, 100)}%` }}
                         />
                       </div>
-                      <span className="text-xs font-medium text-gray-600">{user.contributions}/12</span>
+                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap">{user.contributions}/12</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-semibold text-emerald-600 text-sm">₦{user.totalPaid.toLocaleString()}</p>
+                    <p className="font-semibold text-emerald-600 text-sm whitespace-nowrap">₦{user.totalPaid.toLocaleString()}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm text-gray-600">{user.joinedDate}</p>
+                    <p className="text-sm text-gray-600 whitespace-nowrap">{user.joinedDate}</p>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button 
                         onClick={() => handleViewUser(user)}
                         className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                        <Ban className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleEditUser(user)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit User"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -577,13 +636,16 @@ export function UsersManagement() {
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-2">Package</label>
                       <select
-                        value={formData.package}
-                        onChange={(e) => setFormData({ ...formData, package: e.target.value })}
+                        value={formData.package_id}
+                        onChange={(e) => setFormData({ ...formData, package_id: e.target.value })}
                         className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
                       >
-                        <option value="Basic Bundle">Basic Bundle</option>
-                        <option value="Family Bundle">Family Bundle</option>
-                        <option value="Premium Bundle">Premium Bundle</option>
+                        <option value="">Select Package</option>
+                        {packages.map((pkg: any) => (
+                          <option key={pkg.id} value={pkg.id}>
+                            {pkg.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -614,66 +676,6 @@ export function UsersManagement() {
                   </div>
                 </div>
 
-                {/* Delivery Information */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                      <MapPin className="w-4 h-4 text-white" />
-                    </div>
-                    Delivery Information
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">Delivery Type</label>
-                      <select
-                        value={formData.deliveryType}
-                        onChange={(e) => setFormData({ ...formData, deliveryType: e.target.value as 'pickup' | 'delivery' })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
-                      >
-                        <option value="pickup">Pickup at Collection Point</option>
-                        <option value="delivery">Home Delivery</option>
-                      </select>
-                    </div>
-                    
-                    {formData.deliveryType === 'delivery' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-semibold text-gray-900 mb-2">Delivery Address</label>
-                          <input
-                            type="text"
-                            placeholder="Enter street address"
-                            value={formData.deliveryAddress}
-                            onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-900 mb-2">State</label>
-                          <select
-                            value={formData.deliveryState}
-                            onChange={(e) => setFormData({ ...formData, deliveryState: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
-                          >
-                            <option value="">Select State</option>
-                            {nigerianStates.map(state => (
-                              <option key={state} value={state}>{state}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-900 mb-2">LGA</label>
-                          <input
-                            type="text"
-                            placeholder="Enter LGA"
-                            value={formData.deliveryLga}
-                            onChange={(e) => setFormData({ ...formData, deliveryLga: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
 
