@@ -367,9 +367,9 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
             <div>
               <p className="text-gray-500 text-sm mb-1 font-medium">Total Contributed</p>
               <h2 className="text-4xl font-bold text-gray-900">₦{totalContributed.toLocaleString()}</h2>
-              <p className="text-xs text-emerald-600 font-semibold mt-1">
+              {/* <p className="text-xs text-emerald-600 font-semibold mt-1">
                 Current Value: ₦{currentValue.toLocaleString()}
-              </p>
+              </p> */}
             </div>
             <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${userPackage.gradient} flex items-center justify-center shadow-lg ${userPackage.shadowColor}`}>
               <Sparkles className="w-7 h-7 text-white" />
@@ -391,12 +391,12 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
           </p>
 
           {/* Savings Preview */}
-          <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 mb-4">
+          {/* <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 mb-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-900">Projected Savings</span>
               <span className="text-xl font-bold text-emerald-700">₦{projectedSavings.toLocaleString()}</span>
             </div>
-          </div>
+          </div> */}
           
           {/* View Transactions Button */}
           <button

@@ -58,7 +58,7 @@ export function CatchUpPayment({ onBack, onComplete }: CatchUpPaymentProps) {
                 key={month}
                 className="px-3 py-2 bg-white border border-amber-200 text-gray-900 text-sm font-semibold rounded-xl shadow-sm"
               >
-                {month} 2024
+                {month} {new Date().getFullYear()}
               </span>
             ))}
           </div>

@@ -5,7 +5,7 @@ import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { LateJoinerModal } from '../components/LateJoinerModal';
 import { PaystackModal } from '../components/PaystackModal';
-import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft, Clock } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft, Clock, Eye, EyeOff } from 'lucide-react';
 import { getRegistrationStatus, calculateProportionalValue } from '../utils/registrationLogic';
 import { Package } from '../data/packages';
 import { useQuery } from '@tanstack/react-query';
@@ -72,6 +72,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     return saved ? JSON.parse(saved).quantity || 1 : 1;
   });
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const regStatus = getRegistrationStatus();
   const proportionalValue = calculateProportionalValue(regStatus.currentMonth);
@@ -642,7 +643,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 font-medium">Number of Slots</span>
-                  <span className="font-bold text-gray-900">{quantity} {quantity === 1 ? 'person' : 'people'}</span>
+                  <span className="font-bold text-gray-900">{quantity}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-semibold text-gray-900">Total Monthly Payment</span>
@@ -653,20 +654,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 font-medium">Total per Year</span>
                   <span className="font-bold text-gray-900">₦{(selectedPackage.yearlyTotal * quantity).toLocaleString()}</span>
-                </div>
-                <div className="h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent"></div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-semibold text-gray-900">Package Value</span>
-                  <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    ₦{(selectedPackage.estimatedRetailValue * quantity).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-semibold text-gray-900">Total Savings</span>
-                  <span className="text-xl font-bold text-purple-700">
-                    ₦{(selectedPackage.savings * quantity).toLocaleString()}
-                  </span>
-                </div>
+                </div>              
               </div>
             </Card>
 
@@ -747,13 +735,26 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               <label className="block mb-3 text-sm font-semibold text-gray-900">
                 Password
               </label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </Card>
 
             {userChoice === 'catchup' ? (
@@ -814,7 +815,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Number of Slots</span>
-                    <span className="font-bold text-gray-900">{quantity} {quantity === 1 ? 'person' : 'people'}</span>
+                    <span className="font-bold text-gray-900">{quantity}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-gray-900">Total Monthly Payment</span>
@@ -825,19 +826,6 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Total per Year</span>
                     <span className="font-bold text-gray-900">₦{(selectedPackage.yearlyTotal * quantity).toLocaleString()}</span>
-                  </div>
-                  <div className="h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent"></div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-gray-900">Package Value</span>
-                    <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                      ₦{(selectedPackage.estimatedRetailValue * quantity).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-gray-900">Total Savings</span>
-                    <span className="text-xl font-bold text-purple-700">
-                      ₦{(selectedPackage.savings * quantity).toLocaleString()}
-                    </span>
                   </div>
                 </div>
               </Card>

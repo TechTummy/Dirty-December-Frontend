@@ -84,20 +84,49 @@ export default function App() {
     navigate('/onboarding');
   };
 
+  /* 
+   * REFRESH STATE FUNCTION
+   * This is crucial to fix the "Chioma" issue. When a user logs in or completes onboarding,
+   * we must re-read localStorage to update the app-wide state immediately.
+   */
+  const refreshUserState = () => {
+    const savedUser = localStorage.getItem('user_data');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setUserName(user.name || 'User');
+      setUserEmail(user.email || '');
+      setUserPhone(user.phone || '');
+      setUserStatus(user.status || 'active');
+      setQuantity(user.slots || 1);
+      
+      // Update package
+      if (user.package_id === 1) setSelectedPackage('Basic Bundle');
+      else if (user.package_id === 2) setSelectedPackage('Family Bundle');
+      else if (user.package_id === 3) setSelectedPackage('Premium Bundle');
+      else if (user.package?.name) setSelectedPackage(user.package.name);
+      else setSelectedPackage('Basic Bundle');
+    }
+  };
+
   const handleOnboardingComplete = (status: UserStatus = 'active', packageName?: string, userQuantity?: number) => {
-    setUserStatus(status);
-    if (packageName) {
-      setSelectedPackage(packageName);
-    }
-    if (userQuantity) {
-      setQuantity(userQuantity);
-    }
+    // Refresh state first to ensure consistency
+    refreshUserState();
     
+    // Then apply any specific overrides passed from onboarding
+    setUserStatus(status);
+    if (packageName) setSelectedPackage(packageName);
+    if (userQuantity) setQuantity(userQuantity);
+
     // Show terms modal on first login
     if (!hasAcceptedTerms) {
       setShowTermsModal(true);
     }
 
+    navigate('/dashboard');
+  };
+
+  const handleLoginComplete = () => {
+    refreshUserState();
     navigate('/dashboard');
   };
 
@@ -130,7 +159,7 @@ export default function App() {
               } />
               <Route path="/login" element={
                 <Login 
-                  onLogin={() => navigate('/dashboard')} 
+                  onLogin={handleLoginComplete} 
                   onBackToLanding={() => navigate('/')} 
                   onForgotPassword={() => navigate('/forgot-password')} 
                 />
