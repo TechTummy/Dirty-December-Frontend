@@ -7,7 +7,9 @@ import { LateJoinerModal } from '../components/LateJoinerModal';
 import { PaystackModal } from '../components/PaystackModal';
 import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft, Clock } from 'lucide-react';
 import { getRegistrationStatus, calculateProportionalValue } from '../utils/registrationLogic';
-import { packages, Package } from '../data/packages';
+import { Package } from '../data/packages';
+import { useQuery } from '@tanstack/react-query';
+import { mergeBackendPackages } from '../utils/packageUtils';
 
 interface OnboardingProps {
   onComplete: (userStatus?: 'active' | 'reserved', selectedPackage?: string, quantity?: number) => void;
@@ -46,15 +48,25 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     const saved = localStorage.getItem('onboarding_state');
     return saved ? JSON.parse(saved).userChoice || null : null;
   });
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(() => {
-    if (preSelectedPackageId) return packages.find(pkg => pkg.id === preSelectedPackageId) || null;
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(() => {
+    if (preSelectedPackageId) return preSelectedPackageId;
     const saved = localStorage.getItem('onboarding_state');
     if (saved) {
       const parsed = JSON.parse(saved);
-      return parsed.selectedPackageId ? packages.find(pkg => pkg.id === parsed.selectedPackageId) || null : null;
+      return parsed.selectedPackageId || null;
     }
     return null;
   });
+
+  const { data: backendPackages, isLoading: isPackagesLoading } = useQuery({
+    queryKey: ['public-packages'],
+    queryFn: auth.getPackages,
+    staleTime: 5 * 60 * 1000,
+    retry: 1
+  });
+
+  const displayPackages = mergeBackendPackages(backendPackages?.data?.packages || []);
+  const selectedPackage = displayPackages.find(pkg => pkg.id === selectedPackageId) || null;
   const [quantity, setQuantity] = useState(() => {
     const saved = localStorage.getItem('onboarding_state');
     return saved ? JSON.parse(saved).quantity || 1 : 1;
@@ -85,7 +97,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     setPhone('');
     setOtp('');
     setRegistrationToken(null);
-    setSelectedPackage(null);
+    setRegistrationToken(null);
+    setSelectedPackageId(null);
     setUserChoice(null);
     setName('');
     setEmail('');
@@ -168,19 +181,14 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
       setIsLoading(true);
       try {
         // Map frontend string IDs to backend integer IDs
-        const packageIdMap: Record<string, number> = {
-          'basic': 1,
-          'family': 2,
-          'premium': 3
-        };
-        const packageId = packageIdMap[pkg.id] || 1; // Default to 1 if not found 
+        const packageId = parseInt(pkg.id, 10); // Backend ID is stringified in packageUtils, parse back to int
         const response = await auth.selectPackage(registrationToken, packageId);
         toast.success(response.message || 'Package selected successfully');
-        // Update token if response provides a new one (API response shows it returns one)
+        
         if (response.data?.registration_token) {
            setRegistrationToken(response.data.registration_token);
         }
-        setSelectedPackage(pkg);
+        setSelectedPackageId(pkg.id);
         setStep(3.5); // Go to quantity selection instead of profile
       } catch (error: any) {
         toast.error(error.response?.data?.message || 'Failed to select package');
@@ -190,7 +198,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
       }
     } else {
        // Fallback for non-API flow or if token missing (shouldn't happen in normal flow)
-       setSelectedPackage(pkg);
+       setSelectedPackageId(pkg.id);
        setStep(3.5); 
     }
   };
@@ -492,7 +500,13 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 </div>
 
                 <div className="space-y-4">
-                  {packages.map((pkg) => (
+                  {isPackagesLoading && !backendPackages ? (
+                    <div className="text-center py-10">
+                      <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-gray-500 text-sm">Loading packages...</p>
+                    </div>
+                  ) : (
+                    displayPackages.map((pkg) => (
                     <button
                       key={pkg.id}
                       onClick={() => handlePackageSelect(pkg)}
@@ -549,7 +563,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                         </div>
                       </Card>
                     </button>
-                  ))}
+                  )))}
                 </div>
               </div>
             )}

@@ -5,7 +5,10 @@ import { Partners } from '../components/Partners';
 import { Testimonials } from '../components/Testimonials';
 import { VideoTestimonials } from '../components/VideoTestimonials';
 import { PriceDisclaimer } from '../components/PriceDisclaimer';
-import { packages } from '../data/packages';
+
+import { useQuery } from '@tanstack/react-query';
+import { auth } from '../../lib/api';
+import { mergeBackendPackages } from '../utils/packageUtils';
 import { useState } from 'react';
 
 interface LandingProps {
@@ -16,8 +19,17 @@ interface LandingProps {
 
 export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps) {
   const [selectedPackageForModal, setSelectedPackageForModal] = useState<string | null>(null);
+
+  const { data: backendPackages, isLoading } = useQuery({
+    queryKey: ['public-packages'],
+    queryFn: auth.getPackages,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1
+  });
+
+  const displayPackages = mergeBackendPackages(backendPackages?.data?.packages || []);
   
-  const selectedPackage = packages.find(pkg => pkg.id === selectedPackageForModal);
+  const selectedPackage = displayPackages.find(pkg => pkg.id === selectedPackageForModal);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
@@ -76,8 +88,16 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           <h2 className="text-center font-bold text-gray-900 mb-2">Choose Your Package</h2>
           <p className="text-center text-sm text-gray-600 mb-6">Select the bundle that fits your needs</p>
           
+          
           <div className="space-y-4">
-            {packages.map((pkg) => (
+            {isLoading && !backendPackages ? (
+              // Loading skeleton could be here, but for now fallback to static or just show spinning state
+              <div className="text-center py-10">
+                 <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-2"></div>
+                 <p className="text-gray-500 text-sm">Loading packages...</p>
+              </div>
+            ) : (
+              displayPackages.map((pkg) => (
               <Card 
                 key={pkg.id} 
                 className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all relative cursor-pointer active:scale-[0.98]"
@@ -142,18 +162,33 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
                       )}
                     </>
                   ) : (
-                    pkg.benefits.map((benefit, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${pkg.gradient} flex items-center justify-center flex-shrink-0`}>
-                          <Check className="w-3 h-3 text-white" />
+                    <>
+                      {pkg.benefits.slice(0, 3).map((benefit, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${pkg.gradient} flex items-center justify-center flex-shrink-0`}>
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                          <span className="text-sm text-gray-700">{benefit}</span>
                         </div>
-                        <span className="text-sm text-gray-700">{benefit}</span>
-                      </div>
-                    ))
+                      ))}
+                      {pkg.benefits.length > 3 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPackageForModal(pkg.id);
+                          }}
+                          className="w-full py-2 px-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 hover:border-purple-300 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group mt-3"
+                        >
+                          <span className="font-semibold text-purple-700 text-sm">View All {pkg.benefits.length} Items</span>
+                          <ArrowRight className="w-4 h-4 text-purple-600 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </Card>
-            ))}
+            ))
+            )}
           </div>
           
           {/* Price Disclaimer */}
@@ -212,7 +247,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
 
       {/* Sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto p-6 bg-white/80 backdrop-blur-xl border-t border-gray-200">
-        <GradientButton onClick={onGetStarted}>
+        <GradientButton onClick={() => onGetStarted()}>
           <span className="flex items-center justify-center gap-2">
             Get Started
             <ArrowRight className="w-5 h-5" />
@@ -258,22 +293,38 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
 
               {/* Modal Content */}
               <div className="overflow-y-auto px-6 py-6 space-y-3">
-                {selectedPackage.detailedBenefits?.map((benefit, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center flex-shrink-0 shadow-md ${selectedPackage.shadowColor}`}>
-                        <span className="text-white font-bold text-sm">{index + 1}</span>
+                {selectedPackage.detailedBenefits ? (
+                  selectedPackage.detailedBenefits.map((benefit, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center flex-shrink-0 shadow-md ${selectedPackage.shadowColor}`}>
+                          <span className="text-white font-bold text-sm">{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{benefit.item}</p>
+                          <p className="text-sm text-gray-600">{benefit.quantity} {benefit.unit}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{benefit.item}</p>
-                        <p className="text-sm text-gray-600">{benefit.quantity} {benefit.unit}</p>
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-4 h-4 text-white" />
                       </div>
                     </div>
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-white" />
+                  ))
+                ) : (
+                  selectedPackage.benefits.map((benefit, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center flex-shrink-0 shadow-md ${selectedPackage.shadowColor}`}>
+                          <span className="text-white font-bold text-sm">{index + 1}</span>
+                        </div>
+                        <p className="font-semibold text-gray-900">{benefit}</p>
+                      </div>
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Modal Footer */}
