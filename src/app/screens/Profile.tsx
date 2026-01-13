@@ -15,6 +15,7 @@ interface ProfileProps {
   userPhone?: string;
   selectedPackage?: string;
   userStatus?: 'active' | 'reserved';
+  onProfileUpdate?: () => void;
 }
 
 const nigerianStates = [
@@ -32,6 +33,7 @@ export function Profile({
   userPhone,
   selectedPackage = 'Basic Bundle',
   userStatus = 'active',
+  onProfileUpdate,
 }: ProfileProps) {
   
   // Profile edit state
@@ -86,9 +88,29 @@ export function Profile({
   // Profile Update Mutation
   const updateProfileMutation = useMutation({
     mutationFn: user.updateProfile,
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      // Update local storage if backend returns the updated user object
+      if (data?.data) {
+        let newUser = data.data;
+        // Check if nested user object exists (e.g. { data: { user: {...}, message: "..." } })
+        if (data.data.user) {
+           newUser = data.data.user;
+        }
+        
+        const savedUserStr = localStorage.getItem('user_data');
+        const savedUser = savedUserStr ? JSON.parse(savedUserStr) : {};
+        const updatedUser = { ...savedUser, ...newUser };
+        localStorage.setItem('user_data', JSON.stringify(updatedUser));
+      }
+      
       setSuccessMessage('Profile updated successfully!');
       setShowSuccessMessage(true);
+      
+      // Notify parent app to refresh state immediately
+      if (onProfileUpdate) {
+        onProfileUpdate();
+      }
+      
       setTimeout(() => setShowSuccessMessage(false), 3000);
     },
     onError: (error: any) => {
@@ -228,8 +250,8 @@ export function Profile({
                 <input
                   type="tel"
                   value={profileData.phone}
-                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  readOnly
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed focus:outline-none"
                 />
               </div>
             </div>

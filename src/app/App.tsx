@@ -213,6 +213,7 @@ export default function App() {
                   userPhone={userPhone}
                   selectedPackage={selectedPackage}
                   userStatus={userStatus}
+                  onProfileUpdate={refreshUserState}
                 />
               } />
               {/* Fallback */}
