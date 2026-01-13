@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { ArrowLeft, CheckCircle, CreditCard, Lock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { PaystackModal } from '../components/PaystackModal';
+import { user } from '../../lib/api';
+import { packages } from '../data/packages';
 
 interface ContributeProps {
   onBack: () => void;
@@ -14,15 +17,26 @@ interface ContributeProps {
 export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity = 1, userEmail = 'user@email.com' }: ContributeProps) {
   const [showPaystackModal, setShowPaystackModal] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+
+  // Get current status to determine month
+  const { data: transactionsData } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: user.getTransactions,
+  });
+
+  const rawHistory = transactionsData?.data?.data || transactionsData?.data || [];
+  const contributionHistory = Array.isArray(rawHistory) ? rawHistory : [];
+  const confirmedContributions = contributionHistory.filter((c: any) => c.status === 'confirmed' || c.status === 'success').length;
   
+  // Calculate next month
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const nextPaymentIndex = Math.min(confirmedContributions, 11);
+  const nextPaymentMonth = months[nextPaymentIndex];
+  const currentYear = new Date().getFullYear();
+
   // Get package pricing
-  const packagePrices: Record<string, number> = {
-    'Basic Bundle': 5000,
-    'Family Bundle': 15000,
-    'Premium Bundle': 50000
-  };
-  
-  const monthlyAmount = packagePrices[userPackage] || 5000;
+  const selectedPkg = packages.find(p => p.name === userPackage) || packages[0];
+  const monthlyAmount = selectedPkg.monthlyAmount;
   const totalAmount = monthlyAmount * userQuantity;
 
   const handlePaymentSuccess = () => {
@@ -85,7 +99,12 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
             </div>
             
             <div className="mt-3 pt-3 border-t border-gray-100 text-center">
-              <p className="text-xs text-gray-500">May 2024 Payment</p>
+              <p className="text-xs text-gray-500">
+                {confirmedContributions >= 12 
+                  ? 'All contributions completed' 
+                  : `${nextPaymentMonth} ${currentYear} Payment`
+                }
+              </p>
             </div>
           </div>
         </Card>
@@ -128,7 +147,7 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
               </div>
               <div>
                 <p className="font-semibold text-gray-900 mb-1">Multiple Payment Options</p>
-                <p className="text-sm text-gray-600">Pay with card, bank transfer, or USSD</p>
+                <p className="text-sm text-gray-600">Pay with card, bank transfer, e.t.c</p>
               </div>
             </div>
           </Card>

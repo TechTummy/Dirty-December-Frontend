@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, Gift, MessageCircle, Sparkles, Calendar, LogOut, User, Clock, Receipt, MapPin, Truck, UserCog } from 'lucide-react';
+import { Bell, ChevronRight, Gift, MessageCircle, Sparkles, Calendar, LogOut, User, Clock, Receipt, MapPin, Truck, UserCog, Loader } from 'lucide-react';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
@@ -7,9 +7,11 @@ import { Testimonials } from '../components/Testimonials';
 import { TransactionDrawer } from '../components/TransactionDrawer';
 import { DeliveryInfoModal, DeliveryInfo } from '../components/DeliveryInfoModal';
 import { LearnSection } from '../components/LearnSection';
-import { contributionHistory } from '../data/mockData';
 import { packages, getPackageById } from '../data/packages';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { user } from '../../lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard' | 'profile';
 
@@ -26,25 +28,86 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
   const [showMenu, setShowMenu] = useState(false);
   const [showTransactionDrawer, setShowTransactionDrawer] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
-  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(null);
+  const queryClient = useQueryClient();
   
+  // Fetch Transactions
+  const { data: transactionsData, isLoading: isLoadingTransactions } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: user.getTransactions,
+    retry: 1
+  });
+
+  // Fetch Dashboard Stats
+  const { data: dashboardStatsData } = useQuery({
+    queryKey: ['dashboard_stats'],
+    queryFn: user.getDashboard,
+  });
+
+  // Use API transactions or fallback to empty array
+  const rawHistory = transactionsData?.data?.data || transactionsData?.data || [];
+  const contributionHistory = Array.isArray(rawHistory) ? rawHistory : [];
+
+  // Fetch Delivery Settings
+  const { data: deliverySettingsData } = useQuery({
+    queryKey: ['deliveryLink'],
+    queryFn: user.getDeliverySettings,
+    retry: 1
+  });
+
+  const rawDelivery = deliverySettingsData?.data;
+  const deliveryInfo: DeliveryInfo | null = rawDelivery ? {
+    method: rawDelivery.type || 'pickup', // API uses 'type', frontend uses 'method'
+    type: rawDelivery.type,
+    address: rawDelivery.street_address || rawDelivery.address,
+    city: rawDelivery.city,
+    state: rawDelivery.state,
+    landmark: rawDelivery.landmark,
+    phoneNumber: rawDelivery.phone_number || rawDelivery.phoneNumber
+  } : null;
+
+  // Save Delivery Settings Mutation
+  const saveDeliveryMutation = useMutation({
+    mutationFn: user.saveDeliverySettings,
+    onSuccess: () => {
+      toast.success('Delivery information saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['deliveryLink'] });
+      setShowDeliveryModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to save delivery information');
+    }
+  });
+
   // Get the user's package
   const userPackage = packages.find(pkg => pkg.name === selectedPackage) || packages[0];
   
-  const totalContributed = contributionHistory.reduce((sum, c) => sum + c.amount, 0);
-  const confirmedContributions = contributionHistory.filter(c => c.status === 'confirmed').length;
+  const stats = dashboardStatsData?.data || {};
+
+  // Use API stats if available, otherwise fallback to calculations or zero
+  const totalContributed = stats.total_contributed ?? contributionHistory.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0);
+  const confirmedContributions = stats.contributions_count ?? contributionHistory.filter((c: any) => c.status === 'confirmed' || c.status === 'success').length;
+  
   const progressPercent = (confirmedContributions / 12) * 100;
   const nextYear = new Date().getFullYear() + 1;
+  const currentYear = new Date().getFullYear();
   
-  // Calculate package-specific values (multiplied by quantity)
+  // Package values
   const expectedTotal = userPackage.monthlyAmount * 12 * quantity;
   const currentValue = Math.round((userPackage.estimatedRetailValue * quantity / 12) * confirmedContributions);
   const projectedSavings = userPackage.savings * quantity;
 
+  // Next Payment Info
+  const isCompleted = confirmedContributions >= 12;
+  const nextPaymentMonth = stats.next_payment_date 
+    ? new Date(stats.next_payment_date).toLocaleString('default', { month: 'long' }) 
+    : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][Math.min(confirmedContributions, 11)];
+
   const handleSaveDeliveryInfo = (info: DeliveryInfo) => {
-    setDeliveryInfo(info);
-    // In a real app, this would save to backend/database
+    saveDeliveryMutation.mutate(info);
   };
+
+  // ... rest of component
+
 
   // Reserved spot view
   if (userStatus === 'reserved') {
@@ -373,10 +436,15 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
             <div className="flex-1">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">Next Contribution</h3>
-                  <p className="text-sm text-gray-600">May 2024 • ₦{userPackage.monthlyAmount.toLocaleString()}</p>
+                  <h3 className="font-semibold text-gray-900 mb-1">{isCompleted ? 'Contributions Completed' : 'Next Contribution'}</h3>
+                  <p className="text-sm text-gray-600">
+                    {isCompleted 
+                      ? 'You have completed all your contributions!' 
+                      : `${nextPaymentMonth} ${currentYear} • ₦${(userPackage.monthlyAmount * quantity).toLocaleString()}`
+                    }
+                  </p>
                 </div>
-                <StatusBadge status="pending" />
+                <StatusBadge status={isCompleted ? 'success' : 'pending'} />
               </div>
               <label className="flex items-center gap-2 mt-3 cursor-pointer group">
                 <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />

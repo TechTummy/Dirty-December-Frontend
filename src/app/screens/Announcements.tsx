@@ -1,12 +1,21 @@
 import { ArrowLeft, Megaphone, AlertTriangle, Bell } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '../components/Card';
-import { announcements } from '../data/mockData';
+import { user } from '../../lib/api';
 
 interface AnnouncementsProps {
   onBack: () => void;
 }
 
 export function Announcements({ onBack }: AnnouncementsProps) {
+  // Fetch announcements
+  const { data: notificationsData, isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: user.getNotifications,
+  });
+
+  const announcements = notificationsData?.data || [];
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -27,22 +36,27 @@ export function Announcements({ onBack }: AnnouncementsProps) {
 
       <div className="px-6 -mt-6 pb-6">
         <div className="space-y-4">
-          {announcements.map((announcement) => (
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading updates...</div>
+          ) : announcements.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No announcements yet</div>
+          ) : (
+            announcements.map((announcement: any) => (
             <Card 
               key={announcement.id}
               className={`border-0 shadow-md hover:shadow-lg transition-shadow ${
-                announcement.priority === 'high' 
+                announcement.type === 'urgent' || announcement.priority === 'high' 
                   ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-l-orange-500' 
                   : 'bg-white'
               }`}
             >
               <div className="flex gap-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
-                  announcement.priority === 'high'
+                  announcement.type === 'urgent' || announcement.priority === 'high'
                     ? 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-orange-500/30'
                     : 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-purple-500/30'
                 }`}>
-                  {announcement.priority === 'high' ? (
+                  {announcement.type === 'urgent' || announcement.priority === 'high' ? (
                     <AlertTriangle className="w-6 h-6 text-white" />
                   ) : (
                     <Megaphone className="w-6 h-6 text-white" />
@@ -52,17 +66,17 @@ export function Announcements({ onBack }: AnnouncementsProps) {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-bold text-gray-900">{announcement.title}</h3>
-                    {announcement.priority === 'high' && (
+                    {(announcement.type === 'urgent' || announcement.priority === 'high') && (
                       <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-lg">
                         URGENT
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-gray-600 leading-relaxed mb-3">
-                    {announcement.message}
+                    {announcement.message || announcement.body}
                   </p>
                   <p className="text-xs text-gray-400 font-medium">
-                    {new Date(announcement.date).toLocaleDateString('en-NG', {
+                    {new Date(announcement.created_at || announcement.date).toLocaleDateString('en-NG', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
@@ -71,7 +85,7 @@ export function Announcements({ onBack }: AnnouncementsProps) {
                 </div>
               </div>
             </Card>
-          ))}
+          )))}
         </div>
 
         {/* Info Card */}

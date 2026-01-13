@@ -10,21 +10,53 @@ import { Contribute } from './screens/Contribute';
 import { ValuePreview } from './screens/ValuePreview';
 import { Announcements } from './screens/Announcements';
 import { Profile } from './screens/Profile';
+import { PaymentCallback } from './screens/PaymentCallback';
 import { AdminLogin } from './admin/AdminLogin';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { InstallPWA } from './components/InstallPWA';
 import { TermsModal } from './components/TermsModal';
-import { contributionHistory } from './data/mockData';
 
 type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard' | 'profile';
 type UserStatus = 'active' | 'reserved';
 
 export default function App() {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('Chioma');
-  const [userStatus, setUserStatus] = useState<UserStatus>('active');
-  const [selectedPackage, setSelectedPackage] = useState<string>('Basic Bundle');
-  const [quantity, setQuantity] = useState<number>(1);
+  const [userEmail, setUserEmail] = useState(() => {
+    const savedUser = localStorage.getItem('user_data');
+    return savedUser ? JSON.parse(savedUser).email : '';
+  });
+  const [userPhone, setUserPhone] = useState(() => {
+    const savedUser = localStorage.getItem('user_data');
+    return savedUser ? JSON.parse(savedUser).phone : '';
+  });
+  const [userName, setUserName] = useState(() => {
+    const savedUser = localStorage.getItem('user_data');
+    return savedUser ? JSON.parse(savedUser).name : 'Chioma';
+  });
+
+  // ... (existing code)
+
+  const [userStatus, setUserStatus] = useState<UserStatus>(() => {
+    const savedUser = localStorage.getItem('user_data');
+    return savedUser ? (JSON.parse(savedUser).status || 'active') : 'active';
+  });
+  const [selectedPackage, setSelectedPackage] = useState<string>(() => {
+    const savedUser = localStorage.getItem('user_data');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      // Map backend ID to frontend name if needed, or use name if available
+      // Assuming naive mapping for now based on previous context or defaults
+      if (user.package_id === 1) return 'Basic Bundle';
+      if (user.package_id === 2) return 'Family Bundle';
+      if (user.package_id === 3) return 'Premium Bundle';
+      if (user.package?.name) return user.package.name;
+    }
+    return 'Basic Bundle';
+  });
+  const [quantity, setQuantity] = useState<number>(() => {
+    const savedUser = localStorage.getItem('user_data');
+    return savedUser ? (JSON.parse(savedUser).slots || 1) : 1;
+  });
   const [preSelectedPackageId, setPreSelectedPackageId] = useState<string | null>(null);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -71,10 +103,6 @@ export default function App() {
 
   const handleAcceptTerms = () => {
     setHasAcceptedTerms(true);
-    setShowTermsModal(false);
-  };
-
-  const handleDeclineTerms = () => {
     setShowTermsModal(false);
   };
 
@@ -135,6 +163,7 @@ export default function App() {
                   onBack={() => navigate('/dashboard')} 
                   userPackage={selectedPackage}
                   userQuantity={quantity}
+                  userEmail={userEmail}
                 />
               } />
               <Route path="/value-preview" element={
@@ -146,10 +175,13 @@ export default function App() {
               <Route path="/announcements" element={
                 <Announcements onBack={() => navigate('/dashboard')} />
               } />
+              <Route path="/payment/callback" element={<PaymentCallback />} />
               <Route path="/profile" element={
                 <Profile 
                   onNavigate={handleNavigate}
                   userName={userName}
+                  userEmail={userEmail}
+                  userPhone={userPhone}
                   selectedPackage={selectedPackage}
                   userStatus={userStatus}
                 />

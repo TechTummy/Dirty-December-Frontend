@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { auth } from '../../lib/api';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { LateJoinerModal } from '../components/LateJoinerModal';
 import { PaystackModal } from '../components/PaystackModal';
-import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft, Clock } from 'lucide-react';
 import { getRegistrationStatus, calculateProportionalValue } from '../utils/registrationLogic';
 import { packages, Package } from '../data/packages';
 
@@ -16,24 +16,83 @@ interface OnboardingProps {
 }
 
 export function Onboarding({ onComplete, preSelectedPackageId, onBack }: OnboardingProps) {
-  const [step, setStep] = useState(1);
-  const [phone, setPhone] = useState('');
+  // Load initial state from localStorage if available
+  const [step, setStep] = useState(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).step : 1;
+  });
+  const [phone, setPhone] = useState(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).phone || '' : '';
+  });
   const [otp, setOtp] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).name || '' : '';
+  });
+  const [email, setEmail] = useState(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).email || '' : '';
+  });
   const [password, setPassword] = useState('');
-  const [registrationToken, setRegistrationToken] = useState<string | null>(null);
+  const [registrationToken, setRegistrationToken] = useState<string | null>(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).registrationToken || null : null;
+  });
   const [showLateJoinerModal, setShowLateJoinerModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(
-    preSelectedPackageId ? packages.find(pkg => pkg.id === preSelectedPackageId) || null : null
-  );
-  const [quantity, setQuantity] = useState(1);
+  const [submittingAction, setSubmittingAction] = useState<'pay' | 'reserve' | null>(null);
+  const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).userChoice || null : null;
+  });
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(() => {
+    if (preSelectedPackageId) return packages.find(pkg => pkg.id === preSelectedPackageId) || null;
+    const saved = localStorage.getItem('onboarding_state');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.selectedPackageId ? packages.find(pkg => pkg.id === parsed.selectedPackageId) || null : null;
+    }
+    return null;
+  });
+  const [quantity, setQuantity] = useState(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).quantity || 1 : 1;
+  });
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const regStatus = getRegistrationStatus();
   const proportionalValue = calculateProportionalValue(regStatus.currentMonth);
+
+  // Persistence Effect
+  useEffect(() => {
+    const stateToSave = {
+      step,
+      phone,
+      name,
+      email,
+      registrationToken,
+      userChoice,
+      selectedPackageId: selectedPackage?.id,
+      quantity
+    };
+    localStorage.setItem('onboarding_state', JSON.stringify(stateToSave));
+  }, [step, phone, name, email, registrationToken, userChoice, selectedPackage, quantity]);
+
+  const clearProgress = () => {
+    localStorage.removeItem('onboarding_state');
+    setStep(1);
+    setPhone('');
+    setOtp('');
+    setRegistrationToken(null);
+    setSelectedPackage(null);
+    setUserChoice(null);
+    setName('');
+    setEmail('');
+    setPassword('');
+    setQuantity(1);
+    toast.success('Progress cleared');
+  };
 
   const handlePhoneSubmit = async () => {
     if (phone.length >= 10) {
@@ -136,35 +195,65 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     }
   };
 
-  const handleProfileSubmit = async () => {
+  const handleProfileSubmit = async (action: 'pay' | 'reserve' = 'pay') => {
     if (name.trim() && email.trim() && password.length >= 6) {
        if (registrationToken) {
+         setSubmittingAction(action);
          setIsLoading(true);
          try {
-           await auth.completeRegistration({
-             registration_token: registrationToken,
-             name,
-             phone, // from state
-             email,
-             password
-           });
-           
-           if (userChoice === 'reserve') {
-             toast.success('Registration completed successfully!');
+           if (action === 'reserve') {
+             // Use makeReservation endpoint for reservation flow
+             const response = await auth.makeReservation({
+               registration_token: registrationToken,
+               name,
+               phone, 
+               email,
+               password
+             });
+             
+             if (response.data?.token) {
+               localStorage.setItem('auth_token', response.data.token);
+               localStorage.setItem('user_data', JSON.stringify(response.data.user));
+             }
+             
+             toast.success('Spot reserved successfully! We will notify you when payment opens.');
+             localStorage.removeItem('onboarding_state'); // Clear persistence on success
              onComplete('reserved', selectedPackage?.name, quantity);
            } else {
-             // Show payment modal for active users
-             setShowPaymentModal(true);
+             // Standard registration flow
+             const response = await auth.completeRegistration({
+               registration_token: registrationToken,
+               name,
+               phone, 
+               email,
+               password
+             });
+             
+             // Save auth token and user data
+             if (response.data?.token) {
+               localStorage.setItem('auth_token', response.data.token);
+               localStorage.setItem('user_data', JSON.stringify(response.data.user));
+             }
+
+             if (userChoice === 'reserve') {
+               toast.success('Registration completed successfully!');
+               localStorage.removeItem('onboarding_state'); // Clear persistence on success
+               onComplete('reserved', selectedPackage?.name, quantity);
+             } else {
+               // Show payment modal for active users
+               setShowPaymentModal(true);
+             }
            }
          } catch (error: any) {
            toast.error(error.response?.data?.message || 'Failed to complete registration');
            console.error(error);
          } finally {
            setIsLoading(false);
+           setSubmittingAction(null);
          }
        } else {
          // Fallback/Legacy flow
-         if (userChoice === 'reserve') {
+         if (action === 'reserve' || userChoice === 'reserve') {
            onComplete('reserved', selectedPackage?.name, quantity);
          } else {
            setShowPaymentModal(true);
@@ -176,6 +265,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const handlePaymentSuccess = () => {
     setShowPaymentModal(false);
     toast.success('Payment successful! Welcome to Detty December.');
+    localStorage.removeItem('onboarding_state'); // Clear persistence on success
     onComplete('active', selectedPackage?.name, quantity);
   };
 
@@ -276,9 +366,21 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               />
             </Card>
 
-            <GradientButton onClick={handlePhoneSubmit} disabled={phone.length < 10 || isLoading}>
-              {isLoading ? 'Sending Code...' : 'Continue'}
-            </GradientButton>
+            <div className="flex flex-col gap-3">
+              <GradientButton onClick={handlePhoneSubmit} disabled={phone.length < 10 || isLoading}>
+                {isLoading ? 'Sending Code...' : 'Continue'}
+              </GradientButton>
+              
+              {/* Option to clear progress if user wants to start fresh (e.g. wrong number) */}
+              {localStorage.getItem('onboarding_state') && (
+                 <button 
+                   onClick={clearProgress}
+                   className="text-sm text-gray-500 hover:text-red-500 transition-colors py-2"
+                 >
+                   Start Over (Clear Progress)
+                 </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -373,7 +475,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                   />
                 </Card>
 
-                <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6}>
+                <GradientButton onClick={() => handleProfileSubmit('reserve')} disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}>
                   Complete Registration
                 </GradientButton>
               </div>
@@ -554,8 +656,26 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </div>
             </Card>
 
-            <GradientButton onClick={() => setStep(4)}>
-              Continue to Profile
+            <GradientButton 
+              onClick={async () => {
+                if (registrationToken) {
+                  setIsLoading(true);
+                  try {
+                    await auth.selectSlot(registrationToken, quantity);
+                    setStep(4);
+                  } catch (error: any) {
+                    toast.error(error.response?.data?.message || 'Failed to select slots');
+                    console.error(error);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                } else {
+                  setStep(4);
+                }
+              }} 
+              disabled={isLoading}
+            >
+              {isLoading ? 'Saving...' : 'Continue to Profile'}
             </GradientButton>
           </div>
         )}
@@ -737,9 +857,34 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </Card>
             )}
 
-            <GradientButton onClick={handleProfileSubmit} disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}>
-              {userChoice === 'catchup' ? 'Continue to Payment' : (isLoading ? 'Creating Account...' : 'Start Contributing')}
-            </GradientButton>
+            <div className="flex flex-col gap-3">
+              <GradientButton 
+                onClick={() => handleProfileSubmit('pay')} 
+                disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}
+              >
+                {userChoice === 'catchup' ? 'Continue to Payment' : (submittingAction === 'pay' ? 'Creating Account...' : 'Start Contributing')}
+              </GradientButton>
+              
+              {!userChoice && (
+                <button 
+                  onClick={() => handleProfileSubmit('reserve')}
+                  disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}
+                  className="w-full py-4 text-purple-700 font-semibold bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingAction === 'reserve' ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                      Reserving Spot...
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-5 h-5" />
+                      Reserve Spot (Pay Later)
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, MessageCircle, Filter, DollarSign, Calendar, User, X, Image as ImageIcon, Download } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, Download, DollarSign, User, Image as ImageIcon, Loader } from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Card } from '../../components/Card';
-import { getPackageById } from '../../data/packages';
+import { admin } from '../../../lib/api';
 
 interface ContributionsViewProps {
   packageId: string;
@@ -32,150 +34,108 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const [filterMonth, setFilterMonth] = useState('all');
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [showProofPreview, setShowProofPreview] = useState(false);
-  const [contributions, setContributions] = useState<Contribution[]>([
-    {
-      id: 'CONT-001',
-      userId: '1',
-      userName: 'Chioma Adebayo',
-      userEmail: 'chioma@email.com',
-      userPhone: '080 1234 5678',
-      month: 'January',
-      amount: 15000,
-      quantity: 1, // Number of slots
-      status: 'confirmed',
-      date: '2024-01-15',
-      transactionId: 'DD-2024-JAN-001542',
-      paymentMethod: 'Bank Transfer',
-      reference: 'FLW-234891234',
-      time: '14:23 PM',
-      proofUrl: 'https://example.com/proofs/CONT-001.jpg'
-    },
-    {
-      id: 'CONT-002',
-      userId: '1',
-      userName: 'Chioma Adebayo',
-      userEmail: 'chioma@email.com',
-      userPhone: '080 1234 5678',
-      month: 'February',
-      amount: 15000,
-      quantity: 1, // Number of slots
-      status: 'pending',
-      date: '2024-02-15',
-      transactionId: 'DD-2024-FEB-001789',
-      paymentMethod: 'Card Payment',
-      reference: 'PSK-567234891',
-      time: '09:45 AM',
-      proofUrl: 'https://example.com/proofs/CONT-002.jpg'
-    },
-    {
-      id: 'CONT-003',
-      userId: '4',
-      userName: 'Tunde Williams',
-      userEmail: 'tunde@email.com',
-      userPhone: '070 4567 8901',
-      month: 'January',
-      amount: 15000,
-      quantity: 1, // Number of slots
-      status: 'pending',
-      date: '2024-01-20',
-      transactionId: 'DD-2024-JAN-001678',
-      paymentMethod: 'Bank Transfer',
-      reference: 'GTB-789456123',
-      time: '16:12 PM',
-      proofUrl: 'https://example.com/proofs/CONT-003.jpg'
-    },
-    {
-      id: 'CONT-004',
-      userId: '8',
-      userName: 'Funmi Adeyemi',
-      userEmail: 'funmi@email.com',
-      userPhone: '081 8901 2345',
-      month: 'March',
-      amount: 15000,
-      quantity: 1, // Number of slots
-      status: 'confirmed',
-      date: '2024-03-10',
-      transactionId: 'DD-2024-MAR-002103',
-      paymentMethod: 'USSD',
-      reference: 'UBA-891234567',
-      time: '11:30 AM',
-      proofUrl: 'https://example.com/proofs/CONT-004.jpg'
-    },
-    {
-      id: 'CONT-005',
-      userId: '4',
-      userName: 'Tunde Williams',
-      userEmail: 'tunde@email.com',
-      userPhone: '070 4567 8901',
-      month: 'February',
-      amount: 15000,
-      quantity: 1, // Number of slots
-      status: 'declined',
-      date: '2024-02-20',
-      transactionId: 'DD-2024-FEB-001890',
-      paymentMethod: 'Bank Transfer',
-      reference: 'ZEN-123456789',
-      time: '10:15 AM',
-      proofUrl: 'https://example.com/proofs/CONT-005.jpg'
-    },
-    {
-      id: 'CONT-006',
-      userId: '1',
-      userName: 'Chioma Adebayo',
-      userEmail: 'chioma@email.com',
-      userPhone: '080 1234 5678',
-      month: 'March',
-      amount: 15000,
-      quantity: 1, // Number of slots
-      status: 'confirmed',
-      date: '2024-03-15',
-      transactionId: 'DD-2024-MAR-002234',
-      paymentMethod: 'Card Payment',
-      reference: 'FLW-345678901',
-      time: '13:20 PM',
-      proofUrl: 'https://example.com/proofs/CONT-006.jpg'
-    },
-    {
-      id: 'CONT-007',
-      userId: '8',
-      userName: 'Funmi Adeyemi',
-      userEmail: 'funmi@email.com',
-      userPhone: '081 8901 2345',
-      month: 'April',
-      amount: 15000,
-      quantity: 1, // Number of slots
-      status: 'pending',
-      date: '2024-04-12',
-      transactionId: 'DD-2024-APR-002456',
-      paymentMethod: 'Bank Transfer',
-      reference: 'ACC-567890123',
-      time: '15:45 PM',
-      proofUrl: 'https://example.com/proofs/CONT-007.jpg'
-    },
-  ]);
+  /* 
+    API Integration:
+    - Use useQuery to fetch transactions via admin.getTransactions
+    - Map the API response to the Contribution interface
+    - Filter by packageId if the API returns all transactions
+  */
+  
+  // Fetch Transactions
+  const { data: transactionsData, isLoading: isLoadingTransactions, refetch } = useQuery({
+    queryKey: ['admin-transactions', packageId],
+    queryFn: () => admin.getTransactions({ package_id: packageId }),
+  });
 
-  const packageData = getPackageById(packageId);
+  // Approve Mutation
+  const approveMutation = useMutation({
+    mutationFn: admin.approveTransaction,
+    onSuccess: () => {
+      toast.success('Transaction approved successfully');
+      refetch();
+      setSelectedContribution(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to approve transaction');
+    }
+  });
+
+  // Decline Mutation
+  const declineMutation = useMutation({
+    mutationFn: admin.declineTransaction,
+    onSuccess: () => {
+      toast.success('Transaction declined');
+      refetch();
+      setSelectedContribution(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to decline transaction');
+    }
+  });
+
+  // Derived state from API data
+  const rawContributions = transactionsData?.data?.data || transactionsData?.data || [];
+  const contributions: Contribution[] = Array.isArray(rawContributions) ? rawContributions.map((t: any) => ({
+    id: t.id?.toString() || t.transaction_id || `TRX-${Math.random()}`,
+    userId: t.user?.id?.toString() || t.user_id?.toString() || '0',
+    userName: t.user?.name || 'Unknown User',
+    userEmail: t.user?.email || 'No Email',
+    userPhone: t.user?.phone || 'No Phone',
+    // Derive month from created_at since it's not in the response directly
+    month: t.created_at ? new Date(t.created_at).toLocaleString('default', { month: 'long' }) : 'Unknown',
+    amount: Number(t.amount) || 0,
+    quantity: Number(t.user?.slots || t.slots || 1), 
+    status: t.status === 'approved' ? 'confirmed' : (t.status || 'pending'),
+    date: t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : 'N/A',
+    transactionId: t.transaction_id || t.reference || 'N/A',
+    paymentMethod: t.type || t.payment_method || 'Paystack',
+    reference: t.reference || 'N/A',
+    time: t.created_at ? new Date(t.created_at).toLocaleTimeString() : 'N/A',
+    proofUrl: t.proof_url || '' 
+  })) : [];
+
+  // Fetch Package Details
+  const { data: packageApiResponse, isLoading: isLoadingPackage } = useQuery({
+    queryKey: ['package', packageId],
+    queryFn: () => admin.getPackageById(packageId),
+  });
+  
+  const packageData = packageApiResponse?.data;
+
+  if (isLoadingPackage) {
+    return (
+       <div className="flex bg-slate-50 min-h-screen items-center justify-center">
+         <Loader className="w-8 h-8 animate-spin text-purple-600" />
+      </div>
+    );
+  }
 
   if (!packageData) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">Package not found</p>
+        <button onClick={onBack} className="mt-4 text-blue-600 hover:underline">Go Back</button>
       </div>
     );
   }
+  
+  // Normalize package data for display
+  const displayPackage = {
+    ...packageData,
+    gradient: packageData.gradient || 'from-indigo-500 via-purple-500 to-pink-500',
+    shadowColor: packageData.shadow_color || 'shadow-purple-500/30',
+    monthlyAmount: Number(packageData.price) || packageData.monthlyAmount || 0,
+    yearlyTotal: (Number(packageData.price) || 0) * 12,
+    name: packageData.name,
+    description: packageData.description
+  };
 
   const handleApprove = (contributionId: string) => {
-    setContributions(contributions.map(c => 
-      c.id === contributionId ? { ...c, status: 'confirmed' as const } : c
-    ));
-    setSelectedContribution(null);
+    approveMutation.mutate(contributionId);
   };
 
   const handleDecline = (contributionId: string) => {
-    setContributions(contributions.map(c => 
-      c.id === contributionId ? { ...c, status: 'declined' as const } : c
-    ));
-    setSelectedContribution(null);
+    declineMutation.mutate(contributionId);
   };
 
   const filteredContributions = contributions.filter(contribution => {
@@ -252,7 +212,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     const url = URL.createObjectURL(blob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `${packageData.name}_contributions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `${displayPackage.name}_contributions_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -271,56 +231,64 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       </button>
 
       {/* Package Header */}
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${packageData.gradient} p-8 shadow-xl ${packageData.shadowColor}`}>
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${displayPackage.gradient} p-8 shadow-xl ${displayPackage.shadowColor}`}>
         <div className="relative z-10">
-          <h1 className="text-3xl font-bold text-white mb-2">{packageData.name} Contributions</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{displayPackage.name} Contributions</h1>
           <p className="text-white/90">Manage and review all contribution submissions for this package</p>
         </div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-lg">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <DollarSign className="w-6 h-6 text-white" />
+      {isLoadingTransactions ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+           {[...Array(4)].map((_, i) => (
+             <div key={i} className="h-32 bg-slate-200 rounded-2xl"></div>
+           ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-0 shadow-lg">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <DollarSign className="w-6 h-6 text-white" />
+              </div>
             </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
-          <p className="text-sm text-gray-500">Total Submissions</p>
-        </Card>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
+            <p className="text-sm text-gray-500">Total Submissions</p>
+          </Card>
 
-        <Card className="border-0 shadow-lg">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <Clock className="w-6 h-6 text-white" />
+          <Card className="border-0 shadow-lg">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
             </div>
-          </div>
-          <h3 className="text-2xl font-bold text-amber-600 mb-1">{stats.pending}</h3>
-          <p className="text-sm text-gray-500">Pending Review</p>
-        </Card>
+            <h3 className="text-2xl font-bold text-amber-600 mb-1">{stats.pending}</h3>
+            <p className="text-sm text-gray-500">Pending Review</p>
+          </Card>
 
-        <Card className="border-0 shadow-lg">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <CheckCircle className="w-6 h-6 text-white" />
+          <Card className="border-0 shadow-lg">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
             </div>
-          </div>
-          <h3 className="text-2xl font-bold text-emerald-600 mb-1">{stats.confirmed}</h3>
-          <p className="text-sm text-gray-500">Confirmed</p>
-        </Card>
+            <h3 className="text-2xl font-bold text-emerald-600 mb-1">{stats.confirmed}</h3>
+            <p className="text-sm text-gray-500">Confirmed</p>
+          </Card>
 
-        <Card className="border-0 shadow-lg">
-          <div className="flex items-start justify-between mb-4">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${packageData.gradient} flex items-center justify-center shadow-lg ${packageData.shadowColor}`}>
-              <DollarSign className="w-6 h-6 text-white" />
+          <Card className="border-0 shadow-lg">
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${displayPackage.gradient} flex items-center justify-center shadow-lg ${displayPackage.shadowColor}`}>
+                <DollarSign className="w-6 h-6 text-white" />
+              </div>
             </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{(stats.confirmedAmount / 1000).toFixed(0)}K</h3>
-          <p className="text-sm text-gray-500">Confirmed Amount</p>
-        </Card>
-      </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{(stats.confirmedAmount / 1000).toFixed(0)}K</h3>
+            <p className="text-sm text-gray-500">Confirmed Amount</p>
+          </Card>
+        </div>
+      )}
 
       {/* Contributions Table */}
       <Card className="border-0 shadow-lg">
@@ -551,7 +519,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[85vh] flex flex-col">
               {/* Modal Header */}
-              <div className={`bg-gradient-to-br ${packageData.gradient} px-6 py-6 text-white flex-shrink-0`}>
+              <div className={`bg-gradient-to-br ${displayPackage.gradient} px-6 py-6 text-white flex-shrink-0`}>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xl font-bold">Contribution Details</h2>
                   <button
@@ -681,7 +649,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
               {/* Modal Header */}
-              <div className={`bg-gradient-to-br ${packageData.gradient} px-6 py-6 text-white`}>
+              <div className={`bg-gradient-to-br ${displayPackage.gradient} px-6 py-6 text-white`}>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xl font-bold">Proof Preview</h2>
                   <button

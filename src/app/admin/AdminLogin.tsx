@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, Shield } from 'lucide-react';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
+import { auth } from '../../lib/api';
+import { toast } from 'sonner';
 
 interface AdminLoginProps {
   onLogin: () => void;
@@ -13,15 +15,31 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate login
-    setTimeout(() => {
+    try {
+      const response = await auth.login({
+        login: email, 
+        password
+      });
+
+      if (response.data?.token) {
+        localStorage.setItem('auth_token', response.data.token);
+        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        
+        // Optional: Check for admin role if your API returns it
+        // if (response.data.user.role !== 'admin') { throw new Error('Unauthorized'); }
+
+        onLogin();
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.response?.data?.message || 'Invalid credentials');
+    } finally {
       setIsLoading(false);
-      onLogin();
-    }, 1000);
+    }
   };
 
   return (

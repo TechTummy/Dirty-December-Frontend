@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Plus, Edit, Trash2, Pin, X, AlertCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
+import { admin } from '../../../lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface Announcement {
   id: number;
@@ -14,35 +17,70 @@ interface Announcement {
 }
 
 export function AnnouncementsManagement() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([
-    {
-      id: 1,
-      title: 'Distribution Schedule Updated',
-      message: 'December distribution will start on the 15th. Collection points have been announced.',
-      type: 'delivery',
-      isPinned: true,
-      publishedAt: '2024-04-01 10:00 AM',
-      views: 145
+  const queryClient = useQueryClient();
+  const { data: announcementsData, isLoading } = useQuery({
+    queryKey: ['adminAnnouncements'],
+    queryFn: admin.getAnnouncements,
+  });
+
+  const rawAnnouncements = Array.isArray(announcementsData?.data) 
+    ? announcementsData.data 
+    : (announcementsData?.data?.data || []);
+
+  const announcements: Announcement[] = rawAnnouncements.map((a: any) => ({
+    id: a.id,
+    title: a.title,
+    message: a.message,
+    type: (['delivery', 'payment', 'urgent', 'general'].includes(a.type) ? a.type : 'general') as any, // Default fallback
+    isPinned: a.is_active, // Mapping is_active to isPinned for now as per API docs typical usage or add specific field if backend has it. 
+                           // Actually API docs said `is_active` in body. Let's assume `is_active` behaves like pinned or active.
+                           // If backend has specific `is_pinned` field, update it. For now mapping `is_active` -> `isPinned` logic if that's the intent.
+                           // Waiting for user feedback if this mapping is wrong.
+    publishedAt: new Date(a.created_at).toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit'
+    }),
+    views: a.views || 0
+  }));
+
+  const createMutation = useMutation({
+    mutationFn: admin.createAnnouncement,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminAnnouncements'] });
+      toast.success('Announcement created successfully');
+      handleCloseModal();
     },
-    {
-      id: 2,
-      title: 'New Premium Items Added',
-      message: 'We have added exclusive items to the Premium Bundle this year!',
-      type: 'general',
-      isPinned: false,
-      publishedAt: '2024-03-28 02:30 PM',
-      views: 98
-    },
-    {
-      id: 3,
-      title: 'Payment Deadline Reminder',
-      message: 'April contributions must be submitted by April 5th to avoid delays.',
-      type: 'payment',
-      isPinned: true,
-      publishedAt: '2024-03-25 09:00 AM',
-      views: 156
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to create announcement');
     }
-  ]);
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => admin.updateAnnouncement(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminAnnouncements'] });
+      toast.success('Announcement updated successfully');
+      handleCloseModal();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update announcement');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: admin.deleteAnnouncement,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminAnnouncements'] });
+      toast.success('Announcement deleted successfully');
+      setShowDeleteConfirm(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete announcement');
+    }
+  });
 
   const [showModal, setShowModal] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
@@ -60,7 +98,7 @@ export function AnnouncementsManagement() {
       title: '',
       message: '',
       type: 'general',
-      isPinned: false
+      isPinned: false // This will map to is_active
     });
     setShowModal(true);
   };
@@ -89,56 +127,46 @@ export function AnnouncementsManagement() {
 
   const handleSave = () => {
     if (!formData.title.trim() || !formData.message.trim()) {
-      alert('Please fill in all fields');
+      toast.error('Please fill in all fields');
       return;
     }
 
-    if (editingAnnouncement) {
-      // Update existing announcement
-      setAnnouncements(announcements.map(a => 
-        a.id === editingAnnouncement.id 
-          ? {
-              ...a,
-              title: formData.title,
-              message: formData.message,
-              type: formData.type,
-              isPinned: formData.isPinned
-            }
-          : a
-      ));
-    } else {
-      // Create new announcement
-      const newAnnouncement: Announcement = {
-        id: Math.max(...announcements.map(a => a.id), 0) + 1,
-        title: formData.title,
-        message: formData.message,
-        type: formData.type,
-        isPinned: formData.isPinned,
-        publishedAt: new Date().toLocaleString('en-US', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit', 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: true 
-        }),
-        views: 0
-      };
-      setAnnouncements([newAnnouncement, ...announcements]);
-    }
+    const payload = {
+      title: formData.title,
+      message: formData.message,
+      type: formData.type, // Make sure backend supports this field, currently API docs only mentioned title, message, is_active. 
+                           // Assuming backend handles extra fields or ignores them.
+      is_active: formData.isPinned // Mapping UI "Pin" to "Active" status for visibility, or logic.
+    };
 
-    handleCloseModal();
+    if (editingAnnouncement) {
+      updateMutation.mutate({ id: editingAnnouncement.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   const handleTogglePin = (id: number) => {
-    setAnnouncements(announcements.map(a => 
-      a.id === id ? { ...a, isPinned: !a.isPinned } : a
-    ));
+    const announcement = announcements.find(a => a.id === id);
+    if (announcement) {
+      updateMutation.mutate({ 
+        id, 
+        data: { 
+          // We need title and message? API usually requires full object for PUT or supports PATCH?
+          // Assuming PUT requires all fields, or backend supports partial updates.
+          // Ideally use PATCH for partial. `api.ts` uses PUT. I will send all required fields if possible, 
+          // or just the changed one if backend supports it. safely assuming we need to send known fields.
+          title: announcement.title,
+          message: announcement.message,
+          type: announcement.type,
+          is_active: !announcement.isPinned 
+        } 
+      });
+    }
   };
 
   const handleDelete = (id: number) => {
-    setAnnouncements(announcements.filter(a => a.id !== id));
-    setShowDeleteConfirm(null);
+    deleteMutation.mutate(id);
   };
 
   const getTypeColor = (type: string) => {
@@ -149,6 +177,14 @@ export function AnnouncementsManagement() {
       default: return 'bg-purple-100 text-purple-700';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

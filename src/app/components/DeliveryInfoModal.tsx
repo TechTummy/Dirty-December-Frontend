@@ -10,11 +10,14 @@ interface DeliveryInfoModalProps {
 
 export interface DeliveryInfo {
   method: 'pickup' | 'delivery';
+  type?: 'pickup' | 'delivery'; // API field
   address?: string;
+  street_address?: string; // API field
   city?: string;
   state?: string;
   landmark?: string;
   phoneNumber?: string;
+  phone_number?: string; // API field
 }
 
 export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: DeliveryInfoModalProps) {
@@ -28,17 +31,20 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: Deli
   if (!isOpen) return null;
 
   const handleSave = () => {
-    const deliveryInfo: DeliveryInfo = {
-      method,
-      ...(method === 'delivery' && {
-        address,
-        city,
-        state,
-        landmark,
-        phoneNumber
-      })
+    // Map internal state to API expected format
+    const payload: any = {
+      type: method, // API expects 'type' not 'method'
     };
-    onSave(deliveryInfo);
+
+    if (method === 'delivery') {
+      payload.street_address = address; // API expects 'street_address'
+      payload.city = city;
+      payload.state = state;
+      payload.landmark = landmark;
+      payload.phone_number = phoneNumber; // API expects 'phone_number'
+    }
+
+    onSave(payload);
     onClose();
   };
 

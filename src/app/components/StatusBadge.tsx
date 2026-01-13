@@ -1,5 +1,5 @@
 interface StatusBadgeProps {
-  status: 'confirmed' | 'pending' | 'locked' | 'unlocked' | 'declined';
+  status: 'confirmed' | 'pending' | 'locked' | 'unlocked' | 'declined' | 'approved' | 'success' | 'failed' | string;
   size?: 'sm' | 'md';
 }
 
@@ -34,10 +34,28 @@ export function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
       text: 'text-purple-700',
       border: 'border-purple-200',
       label: 'Unlocked'
+    },
+    approved: {
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-700',
+      border: 'border-emerald-200',
+      label: 'Confirmed'
+    },
+    success: {
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-700',
+      border: 'border-emerald-200',
+      label: 'Confirmed'
+    },
+    failed: {
+      bg: 'bg-red-50',
+      text: 'text-red-700',
+      border: 'border-red-200',
+      label: 'Declined'
     }
   };
 
-  const config = configs[status];
+  const config = configs[status as keyof typeof configs] || configs.pending;
   const sizeClasses = size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm';
 
   return (
