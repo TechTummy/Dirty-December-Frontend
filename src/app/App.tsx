@@ -204,6 +204,7 @@ export default function App() {
                 <ValuePreview 
                   onBack={() => navigate('/dashboard')} 
                   selectedPackage={selectedPackage} 
+                  packageId={packageId}
                 />
               } />
               <Route path="/announcements" element={

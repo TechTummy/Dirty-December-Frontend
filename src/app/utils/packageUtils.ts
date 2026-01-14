@@ -15,29 +15,66 @@ export interface BackendPackage {
     display_order: number;
 }
 
+// Deterministic Style Palette
+// These styles will be rotated based on package ID to ensure every package looks unique and beautiful
+const PREMIUM_STYLES = [
+    {
+        id: 'style-1', // Purple/Indigo (Classic)
+        gradient: 'from-indigo-600 via-purple-600 to-pink-600',
+        shadowColor: 'shadow-purple-500/30'
+    },
+    {
+        id: 'style-2', // Emerald/Teal (Fresh)
+        gradient: 'from-emerald-500 via-teal-500 to-cyan-500',
+        shadowColor: 'shadow-emerald-500/30'
+    },
+    {
+        id: 'style-3', // Amber/Orange (Warm)
+        gradient: 'from-amber-500 via-orange-500 to-red-500',
+        shadowColor: 'shadow-orange-500/30'
+    },
+    {
+        id: 'style-4', // Blue/Cyan (Cool)
+        gradient: 'from-blue-600 via-cyan-500 to-sky-400',
+        shadowColor: 'shadow-blue-500/30'
+    },
+    {
+        id: 'style-5', // Rose/Pink (Elegant)
+        gradient: 'from-rose-500 via-pink-500 to-fuchsia-500',
+        shadowColor: 'shadow-pink-500/30'
+    },
+    {
+        id: 'style-6', // Violet/Indigo (Deep)
+        gradient: 'from-violet-600 via-indigo-600 to-blue-600',
+        shadowColor: 'shadow-indigo-500/30'
+    }
+];
+
 export function mergeBackendPackages(backendPackages: BackendPackage[]): Package[] {
     if (!backendPackages || backendPackages.length === 0) {
         return frontendPackages;
     }
 
-    // Helper to normalize text for matching (e.g. "Basic Bundle" -> "basic")
-    const normalize = (text: string) => text.toLowerCase().includes('basic') ? 'basic' :
-        text.toLowerCase().includes('family') ? 'family' :
-            text.toLowerCase().includes('premium') ? 'premium' : text.toLowerCase();
-
     return backendPackages.map(bp => {
-        // Find matching frontend definition for UI styles (gradients, badges, etc)
-        const normalizedName = normalize(bp.name);
-        // Try to match by name pattern first, otherwise fallback to "basic" style
-        const uiDef = frontendPackages.find(fp => fp.id === normalizedName) ||
-            frontendPackages.find(fp => fp.name === bp.name) ||
-            frontendPackages[0];
+        // Use ID for deterministic style assignment
+        // abs() ensures positive index even if something weird happens with ID
+        const styleIndex = Math.abs(bp.id) % PREMIUM_STYLES.length;
+        const style = PREMIUM_STYLES[styleIndex];
+
+        // determine badge (prefer backend, fallback to logic based on price)
+        let badge = bp.badge;
+        if (!badge) {
+            const price = parseFloat(bp.monthly_contribution);
+            if (price >= 50000) badge = "PREMIUM VALUE";
+            else if (price >= 15000) badge = "POPULAR";
+            else badge = undefined;
+        }
 
         return {
             // Use backend data primarily
             id: bp.id.toString(),
             name: bp.name,
-            description: bp.description || uiDef.description,
+            description: bp.description || `Perfect for your needs`,
             monthlyAmount: parseFloat(bp.monthly_contribution),
             yearlyTotal: parseFloat(bp.yearly_contribution),
             estimatedRetailValue: parseFloat(bp.package_worth),
@@ -45,15 +82,13 @@ export function mergeBackendPackages(backendPackages: BackendPackage[]): Package
             savingsPercent: parseFloat(bp.savings_percentage),
 
             // Use backend benefits. 
-            // Note: Backend gives simple strings. Frontend 'detailedBenefits' (item/qty/unit) is not available from backend.
-            // We will fallback to 'benefits' array.
             benefits: bp.benefits,
             detailedBenefits: undefined, // Explicitly clear detailedBenefits so UI uses the simple list
 
-            // Keep UI styles from local config
-            gradient: uiDef.gradient,
-            shadowColor: uiDef.shadowColor,
-            badge: bp.badge || uiDef.badge // Prefer backend badge if available
+            // Apply deterministic style
+            gradient: style.gradient,
+            shadowColor: style.shadowColor,
+            badge: badge
         } as unknown as Package; // Force cast to match Package interface
     });
 }
