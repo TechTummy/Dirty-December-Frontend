@@ -10,9 +10,10 @@ import { Loader } from 'lucide-react';
 interface ValuePreviewProps {
   onBack: () => void;
   selectedPackage?: string;
+  packageId?: number;
 }
 
-export function ValuePreview({ onBack, selectedPackage = 'Basic Bundle' }: ValuePreviewProps) {
+export function ValuePreview({ onBack, selectedPackage = 'Basic Bundle', packageId }: ValuePreviewProps) {
   // Fetch packages from backend
   const { data: packagesData, isLoading } = useQuery({
     queryKey: ['packages'],
@@ -27,7 +28,10 @@ export function ValuePreview({ onBack, selectedPackage = 'Basic Bundle' }: Value
   const mergedPackages = mergeBackendPackages(backendList);
   
   // Get the user's package
-  const userPackage = mergedPackages.find(pkg => pkg.name === selectedPackage) || mergedPackages[0];
+  // Prioritize lookup by packageId if available
+  const userPackage = (packageId ? mergedPackages.find(pkg => Number(pkg.id) === Number(packageId)) : null) || 
+                      mergedPackages.find(pkg => pkg.name === selectedPackage) || 
+                      mergedPackages[0];
 
   if (isLoading || !userPackage) {
     return (
