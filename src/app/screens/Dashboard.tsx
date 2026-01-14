@@ -7,9 +7,10 @@ import { Testimonials } from '../components/Testimonials';
 import { TransactionDrawer } from '../components/TransactionDrawer';
 import { DeliveryInfoModal, DeliveryInfo } from '../components/DeliveryInfoModal';
 import { LearnSection } from '../components/LearnSection';
-import { packages, getPackageById } from '../data/packages';
+import { packages as staticPackages } from '../data/packages';
+import { mergeBackendPackages } from '../utils/packageUtils';
 import { useState, useEffect } from 'react';
-import { user } from '../../lib/api';
+import { user, auth } from '../../lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -22,9 +23,10 @@ interface DashboardProps {
   userStatus?: 'active' | 'reserved';
   selectedPackage?: string;
   quantity?: number;
+  packageId?: number;
 }
 
-export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active', selectedPackage = 'Basic Bundle', quantity = 1 }: DashboardProps) {
+export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active', selectedPackage = 'Basic Bundle', quantity = 1, packageId }: DashboardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showTransactionDrawer, setShowTransactionDrawer] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -65,6 +67,12 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
     phoneNumber: rawDelivery.phone_number || rawDelivery.phoneNumber
   } : null;
 
+  // Fetch Packages for dynamic calculation
+  const { data: packagesData } = useQuery({
+    queryKey: ['packages'],
+    queryFn: auth.getPackages,
+  });
+
   // Save Delivery Settings Mutation
   const saveDeliveryMutation = useMutation({
     mutationFn: user.saveDeliverySettings,
@@ -78,8 +86,21 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
     }
   });
 
-  // Get the user's package
-  const userPackage = packages.find(pkg => pkg.name === selectedPackage) || packages[0];
+  // Get the user's package dynamically
+  // 1. Get backend packages list
+  const backendList = packagesData?.data?.packages && Array.isArray(packagesData.data.packages) 
+    ? packagesData.data.packages 
+    : [];
+  
+  // 2. Merge with frontend definitions
+  const allPackages = mergeBackendPackages(backendList);
+  
+  // 3. Find match by ID (preferred) or name
+  // Note: staticPackages[0] is strictly a fallback if API fails completely and "Basic Bundle" isn't found
+  const userPackage = (packageId ? allPackages.find(pkg => Number(pkg.id) === Number(packageId)) : null) || 
+                      allPackages.find(pkg => pkg.name === selectedPackage) || 
+                      staticPackages.find(p => p.name === 'Basic Bundle') || 
+                      staticPackages[0];
   
   const stats = dashboardStatsData?.data || {};
 
