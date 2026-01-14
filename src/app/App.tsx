@@ -57,6 +57,10 @@ export default function App() {
     const savedUser = localStorage.getItem('user_data');
     return savedUser ? (JSON.parse(savedUser).slots || 1) : 1;
   });
+  const [packageId, setPackageId] = useState<number | undefined>(() => {
+    const savedUser = localStorage.getItem('user_data');
+    return savedUser ? JSON.parse(savedUser).package_id : undefined;
+  });
   const [preSelectedPackageId, setPreSelectedPackageId] = useState<string | null>(null);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -98,12 +102,12 @@ export default function App() {
       setUserPhone(user.phone || '');
       setUserStatus(user.status || 'active');
       setQuantity(user.slots || 1);
+      setPackageId(user.package_id);
       
       // Update package
-      if (user.package_id === 1) setSelectedPackage('Basic Bundle');
-      else if (user.package_id === 2) setSelectedPackage('Family Bundle');
-      else if (user.package_id === 3) setSelectedPackage('Premium Bundle');
-      else if (user.package?.name) setSelectedPackage(user.package.name);
+      // If we have a package name from backend, use it. Otherwise fallback to ID-based selection or default.
+      if (user.package?.name) setSelectedPackage(user.package.name);
+      else if (user.package_name) setSelectedPackage(user.package_name);
       else setSelectedPackage('Basic Bundle');
     }
   };
@@ -185,6 +189,7 @@ export default function App() {
                   userStatus={userStatus}
                   selectedPackage={selectedPackage}
                   quantity={quantity}
+                  packageId={packageId}
                 />
               } />
               <Route path="/contribute" element={
