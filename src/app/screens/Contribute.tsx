@@ -28,16 +28,24 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
   const contributionHistory = Array.isArray(rawHistory) ? rawHistory : [];
   const confirmedContributions = contributionHistory.filter((c: any) => c.status === 'confirmed' || c.status === 'success').length;
   
-  // Calculate next month
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const nextPaymentIndex = Math.min(confirmedContributions, 11);
-  const nextPaymentMonth = months[nextPaymentIndex];
+  // Fetch Dashboard Stats for accurate next payment data
+  const { data: dashboardStatsData } = useQuery({
+    queryKey: ['dashboard_stats'],
+    queryFn: user.getDashboard,
+  });
+  
+  const stats = dashboardStatsData?.data || {};
   const currentYear = new Date().getFullYear();
 
   // Get package pricing
   const selectedPkg = packages.find(p => p.name === userPackage) || packages[0];
   const monthlyAmount = selectedPkg.monthlyAmount;
   const totalAmount = monthlyAmount * userQuantity;
+  
+  // Use backend data for payment description
+  const nextPaymentLabel = stats.next_payment_date 
+      ? stats.next_payment_date // e.g. "April 2026"
+      : 'Contribution Payment'; 
 
   const handlePaymentSuccess = () => {
     setShowPaystackModal(false);
@@ -99,11 +107,8 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
             </div>
             
             <div className="mt-3 pt-3 border-t border-gray-100 text-center">
-              <p className="text-xs text-gray-500">
-                {confirmedContributions >= 12 
-                  ? 'All contributions completed' 
-                  : `${nextPaymentMonth} ${currentYear} Payment`
-                }
+              <p className="text-xs text-gray-500 font-medium bg-gray-50 inline-block px-3 py-1 rounded-full">
+                Paying for: <span className="text-gray-900">{nextPaymentLabel}</span>
               </p>
             </div>
           </div>

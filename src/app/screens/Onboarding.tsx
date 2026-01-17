@@ -136,9 +136,24 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
         if (regStatus.isMidCycle && !userChoice) {
           setShowLateJoinerModal(true);
         } else {
-          // If package is already pre-selected, go to quantity selection
-          if (selectedPackage) {
-            setStep(3.5);
+          // If package is already pre-selected (from Landing), auto-select it via API then go to quantity
+          if (selectedPackage || preSelectedPackageId) {
+             const pkgIdToSelect = preSelectedPackageId || selectedPackage?.id;
+             if (pkgIdToSelect) {
+                try {
+                   // Clean implementation: Call the API to select the package automatically
+                   const numericId = parseInt(pkgIdToSelect, 10);
+                   await auth.selectPackage(response.data.registration_token, numericId);
+                   // Update token if response has a new one (though usually it's same session)
+                   setStep(3.5);
+                } catch (err) {
+                   console.error("Auto-select package failed", err);
+                   // Fallback: If auto-select fails, just show the selection screen
+                   setStep(3); 
+                }
+             } else {
+                setStep(3.5);
+             }
           } else {
             setStep(3); // Go to package selection
           }
@@ -229,7 +244,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
              localStorage.removeItem('onboarding_state'); // Clear persistence on success
              onComplete('reserved', selectedPackage?.name, quantity);
            } else {
-             // Standard registration flow
+             // Standard registration flow - REGISTER FIRST
+             // We must create the user account BEFORE initiating payment
              const response = await auth.completeRegistration({
                registration_token: registrationToken,
                name,
@@ -238,7 +254,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                password
              });
              
-             // Save auth token and user data
+             // Save auth token and user data immediately
+             // This is crucial: Payment endpoints need this token
              if (response.data?.token) {
                localStorage.setItem('auth_token', response.data.token);
                localStorage.setItem('user_data', JSON.stringify(response.data.user));
@@ -249,7 +266,9 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                localStorage.removeItem('onboarding_state'); // Clear persistence on success
                onComplete('reserved', selectedPackage?.name, quantity);
              } else {
-               // Show payment modal for active users
+               // Registration successful! Now show payment modal
+               // The PaystackModal will use the token we just saved to initialize the transaction
+               toast.success('Registration successful! Please complete your payment.');
                setShowPaymentModal(true);
              }
            }
@@ -261,12 +280,9 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
            setSubmittingAction(null);
          }
        } else {
-         // Fallback/Legacy flow
-         if (action === 'reserve' || userChoice === 'reserve') {
-           onComplete('reserved', selectedPackage?.name, quantity);
-         } else {
-           setShowPaymentModal(true);
-         }
+         // Fallback/Legacy flow (should strictly not happen if flows are correct)
+         toast.error("Registration session expired. Please start again.");
+         setStep(1);
        }
     }
   };
@@ -275,6 +291,10 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     setShowPaymentModal(false);
     toast.success('Payment successful! Welcome to Detty December.');
     localStorage.removeItem('onboarding_state'); // Clear persistence on success
+    
+    // Refresh user state to ensure status is updated to 'active'
+    // This will happen automatically when App.tsx detects route change or we can force it if needed
+    // But mainly we just complete the flow
     onComplete('active', selectedPackage?.name, quantity);
   };
 
@@ -589,10 +609,16 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center shadow-lg ${selectedPackage.shadowColor}`}>
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold text-gray-900">{selectedPackage.name}</h3>
                   <p className="text-xs text-gray-600">{selectedPackage.description}</p>
                 </div>
+                <button 
+                  onClick={() => setStep(3)}
+                  className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-white/50 px-2 py-1 rounded-lg border border-purple-100"
+                >
+                  Change
+                </button>
               </div>
               
               <div className="flex justify-between items-center">

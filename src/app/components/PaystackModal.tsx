@@ -51,8 +51,19 @@ export function PaystackModal({ amount, packageName, quantity, onClose }: Paysta
 
             <h3 className="text-xl font-bold text-gray-900 mb-2">Secure Payment</h3>
             <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-100">
-               <p className="text-3xl font-bold text-gray-900">₦{amount.toLocaleString()}</p>
-               <p className="text-xs text-gray-500 mt-1">{packageName} × {quantity}</p>
+               <div className="flex justify-between items-center mb-2">
+                 <span className="text-gray-500 text-sm">Amount</span>
+                 <span className="font-semibold text-gray-900">₦{amount.toLocaleString()}</span>
+               </div>
+               <div className="flex justify-between items-center mb-3">
+                 <span className="text-gray-500 text-sm">Transaction Fee (1.5%)</span>
+                 <span className="font-semibold text-gray-900">₦{(amount * 0.015).toLocaleString()}</span>
+               </div>
+               <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
+                 <span className="font-bold text-gray-900">Total to Pay</span>
+                 <span className="text-2xl font-bold text-gray-900">₦{(amount * 1.015).toLocaleString()}</span>
+               </div>
+               <p className="text-xs text-gray-500 mt-2 text-center">{packageName} × {quantity} Slots</p>
             </div>
 
             <p className="text-gray-600 text-sm mb-8 leading-relaxed">
