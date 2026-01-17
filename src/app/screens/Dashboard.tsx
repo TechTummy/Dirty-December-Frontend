@@ -388,27 +388,50 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
             <div>
               <p className="text-gray-500 text-sm mb-1 font-medium">Total Contributed</p>
               <h2 className="text-4xl font-bold text-gray-900">₦{totalContributed.toLocaleString()}</h2>
-              {/* <p className="text-xs text-emerald-600 font-semibold mt-1">
-                Current Value: ₦{currentValue.toLocaleString()}
-              </p> */}
             </div>
             <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${userPackage.gradient} flex items-center justify-center shadow-lg ${userPackage.shadowColor}`}>
               <Sparkles className="w-7 h-7 text-white" />
             </div>
           </div>
           
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className={`h-full bg-gradient-to-r ${userPackage.gradient} rounded-full transition-all duration-500`}
-                style={{ width: `${progressPercent}%` }}
-              ></div>
-            </div>
-            <span className="text-sm font-semibold text-gray-900">{confirmedContributions}/12</span>
+          {/* Monthly Progress Grid */}
+          <div className="mb-4">
+             <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-semibold text-gray-700">Monthly Progress</span>
+                <span className="text-xs font-bold text-purple-700">{confirmedContributions}/12 Paid</span>
+             </div>
+             <div className="grid grid-cols-6 gap-2 sm:gap-3">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((monthIndex) => {
+                   const isPaid = stats.paid_months_indices?.includes(monthIndex);
+                   const isNext = !isPaid && !isCompleted && (monthIndex === (stats.paid_months_indices?.length || 0) + 1);
+                   const monthName = new Date(0, monthIndex - 1).toLocaleString('default', { month: 'short' });
+                   
+                   return (
+                      <div 
+                        key={monthIndex}
+                        className={`
+                           relative flex flex-col items-center justify-center py-2 rounded-lg text-[10px] font-medium border transition-all
+                           ${isPaid 
+                              ? `bg-gradient-to-br ${userPackage.gradient} text-white border-transparent shadow-sm` 
+                              : isNext
+                                 ? 'bg-purple-50 text-purple-700 border-purple-200 ring-1 ring-purple-200 ring-offset-1'
+                                 : 'bg-slate-50 text-gray-400 border-slate-100'
+                           }
+                        `}
+                      >
+                         <span>{monthName}</span>
+                         {isPaid && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /></div>}
+                      </div>
+                   );
+                })}
+             </div>
           </div>
           
           <p className="text-xs text-gray-500 font-medium mb-3">
-            {12 - confirmedContributions} months remaining until December
+             {isCompleted 
+                ? 'All monthly contributions completed!' 
+                : `${12 - confirmedContributions} months remaining`
+             }
           </p>
 
           {/* Savings Preview */}
@@ -459,9 +482,9 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">{isCompleted ? 'Contributions Completed' : 'Next Contribution'}</h3>
                   <p className="text-sm text-gray-600">
-                    {isCompleted 
+                      {isCompleted 
                       ? 'You have completed all your contributions!' 
-                      : `${nextPaymentMonth} ${currentYear} • ₦${(userPackage.monthlyAmount * quantity).toLocaleString()}`
+                      : `${stats.next_payment_date || nextPaymentMonth} • ₦${(stats.next_payment_amount || userPackage.monthlyAmount * quantity).toLocaleString()}`
                     }
                   </p>
                 </div>

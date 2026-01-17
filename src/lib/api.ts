@@ -1,5 +1,29 @@
 import axios from 'axios';
 
+// TypeScript Interfaces for API Responses
+
+export interface Transaction {
+    id: number;
+    transaction_id: string;
+    reference: string;
+    amount: string;
+    payment_month: number | null;
+    payment_year: number | null;
+    status: 'pending' | 'success' | 'failed' | 'confirmed';
+    created_at: string;
+}
+
+export interface DashboardData {
+    total_contributed: number;
+    target_amount: number;
+    next_payment_date: string; // e.g. "April 2026" or "Year Complete"
+    next_payment_amount: number;
+    contributions_count: number;
+    paid_months_indices: number[]; // e.g. [1, 2, 3] for Jan, Feb, Mar
+    package_name: string;
+    status: 'active' | 'inactive' | 'reserved';
+}
+
 // Create a standard axios instance given the base URL.
 export const api = axios.create({
     baseURL: '/',
@@ -7,7 +31,6 @@ export const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
-
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
