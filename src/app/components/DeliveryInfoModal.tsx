@@ -1,54 +1,124 @@
-import { X, MapPin, Truck, PackageCheck } from 'lucide-react';
-import { useState } from 'react';
+import { X, Truck, PackageCheck, CreditCard, ChevronRight, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { user } from '../../lib/api';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface DeliveryInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (deliveryInfo: DeliveryInfo) => void;
   currentInfo?: DeliveryInfo | null;
+  deliveryPaid?: boolean; // New prop to indicate if payment is already verified
 }
 
 export interface DeliveryInfo {
   method: 'pickup' | 'delivery';
-  type?: 'pickup' | 'delivery'; // API field
+  type?: 'pickup' | 'delivery'; 
   address?: string;
-  street_address?: string; // API field
+  street_address?: string;
   city?: string;
   state?: string;
   landmark?: string;
   phoneNumber?: string;
-  phone_number?: string; // API field
+  phone_number?: string;
 }
 
-export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: DeliveryInfoModalProps) {
-  const [method, setMethod] = useState<'pickup' | 'delivery'>(currentInfo?.method || 'pickup');
-  const [address, setAddress] = useState(currentInfo?.address || '');
+const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", 
+  "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", 
+  "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", 
+  "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
+];
+
+export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo, deliveryPaid = false }: DeliveryInfoModalProps) {
+  const [method, setMethod] = useState<'pickup' | 'delivery'>(
+    // Priority: 1. If paid, must be delivery. 2. If saved type exists. 3. Default to delivery (safer than pickup)
+    deliveryPaid ? 'delivery' : (currentInfo?.type === 'pickup' ? 'pickup' : 'delivery')
+  );
+  
+  const [address, setAddress] = useState(currentInfo?.street_address || currentInfo?.address || '');
   const [city, setCity] = useState(currentInfo?.city || '');
   const [state, setState] = useState(currentInfo?.state || '');
   const [landmark, setLandmark] = useState(currentInfo?.landmark || '');
-  const [phoneNumber, setPhoneNumber] = useState(currentInfo?.phoneNumber || '');
+  const [phoneNumber, setPhoneNumber] = useState(currentInfo?.phone_number || currentInfo?.phoneNumber || '');
+  
+  // Payment State
+  const [isPaid, setIsPaid] = useState(deliveryPaid);
+  const [selectedPaymentState, setSelectedPaymentState] = useState('');
+
+  // Fetch Delivery Fees
+  const { data: feesData } = useQuery({
+    queryKey: ['delivery-fees'],
+    queryFn: user.getDeliveryFees,
+  });
+
+  const deliveryFees = Array.isArray(feesData) ? feesData : (feesData?.data || []);
+  const selectedFee = deliveryFees.find((f: any) => f.state?.toLowerCase() === selectedPaymentState?.toLowerCase())?.fee;
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('Delivery Fees Response:', feesData);
+    console.log('Parsed Fees:', deliveryFees);
+    console.log('Selected State:', selectedPaymentState);
+    console.log('Found Fee:', selectedFee);
+  }, [feesData, selectedPaymentState]);
+
+  // Update paid status when prop changes
+  useEffect(() => {
+    setIsPaid(deliveryPaid);
+    // If already paid:
+    // 1. Force method to delivery
+    // 2. Set state if available
+    if (deliveryPaid) {
+        setMethod('delivery');
+        if (currentInfo?.state) {
+            setSelectedPaymentState(currentInfo.state);
+            setState(currentInfo.state);
+        }
+    }
+  }, [deliveryPaid, currentInfo]);
+
+  const initiatePaymentMutation = useMutation({
+    mutationFn: user.initiateDeliveryPayment,
+    onSuccess: (data: any) => {
+      // Save flag to local storage for callback handling
+      localStorage.setItem('pending_payment_type', 'delivery');
+      localStorage.setItem('delivery_payment_state', selectedPaymentState);
+      
+      // Redirect to Paystack
+      if (data.data?.authorization_url) {
+        window.location.href = data.data.authorization_url;
+      } else {
+        toast.error('Failed to initialize payment gateway');
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to initiate delivery payment');
+    }
+  });
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    // Map internal state to API expected format
     const payload: any = {
-      type: method, // API expects 'type' not 'method'
+      type: method,
     };
 
     if (method === 'delivery') {
-      payload.street_address = address; // API expects 'street_address'
+      payload.street_address = address;
       payload.city = city;
-      payload.state = state;
+      payload.state = state || selectedPaymentState; // Use selected state if locked
       payload.landmark = landmark;
-      payload.phone_number = phoneNumber; // API expects 'phone_number'
+      payload.phone_number = phoneNumber;
     }
 
     onSave(payload);
     onClose();
   };
 
-  const isDeliveryFormValid = method === 'pickup' || (address && city && state && phoneNumber);
+  const isDeliveryFormValid = method === 'pickup' || (address && city && (state || selectedPaymentState) && phoneNumber);
+  
 
   return (
     <>
@@ -79,11 +149,14 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: Deli
               <label className="font-semibold text-gray-900">Delivery Method</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setMethod('pickup')}
+                  onClick={() => !isPaid && setMethod('pickup')}
+                  disabled={isPaid}
                   className={`p-4 rounded-xl border-2 transition-all active:scale-95 ${
                     method === 'pickup'
                       ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      : isPaid 
+                        ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
                   <PackageCheck className={`w-8 h-8 mx-auto mb-2 ${
@@ -92,7 +165,9 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: Deli
                   <p className={`font-semibold text-sm ${
                     method === 'pickup' ? 'text-purple-900' : 'text-gray-700'
                   }`}>Pickup</p>
-                  <p className="text-xs text-gray-500 mt-1">Collect at center</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {isPaid ? 'Unavailable (Delivery Paid)' : 'Collect at center'}
+                  </p>
                 </button>
 
                 <button
@@ -109,7 +184,7 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: Deli
                   <p className={`font-semibold text-sm ${
                     method === 'delivery' ? 'text-purple-900' : 'text-gray-700'
                   }`}>Delivery</p>
-                  <p className="text-xs text-gray-500 mt-1">To your address</p>
+                  <p className="text-xs text-gray-500 mt-1">To your state</p>
                 </button>
               </div>
             </div>
@@ -152,13 +227,25 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: Deli
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       State <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="e.g., Lagos"
-                      className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
+                    {isPaid ? (
+                        <input
+                            type="text"
+                            value={state || selectedPaymentState}
+                            readOnly
+                            className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
+                        />
+                    ) : (
+                        <select
+                            value={selectedPaymentState}
+                            onChange={(e) => setSelectedPaymentState(e.target.value)}
+                            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+                        >
+                            <option value="">Choose a state...</option>
+                            {NIGERIAN_STATES.map(st => (
+                                <option key={st} value={st}>{st}</option>
+                            ))}
+                        </select>
+                    )}
                   </div>
                 </div>
 
@@ -187,6 +274,18 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: Deli
                     className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
+
+                {!isPaid && selectedPaymentState && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+                        <CreditCard className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+                         <div>
+                            <p className="font-semibold text-amber-900 text-sm">Payment Required</p>
+                            <p className="text-xs text-amber-700 mt-1">
+                                You will be redirected to Paystack to pay the delivery fee for {selectedPaymentState} after clicking save.
+                            </p>
+                        </div>
+                    </div>
+                )}
               </div>
             )}
 
@@ -207,17 +306,53 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo }: Deli
 
           {/* Modal Footer */}
           <div className="px-6 py-4 border-t border-gray-100 bg-slate-50 space-y-3">
-            <button
-              onClick={handleSave}
-              disabled={!isDeliveryFormValid}
-              className={`w-full py-3.5 px-4 rounded-xl font-semibold text-white transition-all active:scale-[0.98] ${
-                isDeliveryFormValid
-                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:shadow-lg'
-                  : 'bg-gray-300 cursor-not-allowed'
-              }`}
-            >
-              Save Delivery Information
-            </button>
+            {method === 'delivery' && !isPaid ? (
+                <button
+                    onClick={() => {
+                        // Validate
+                        if (!selectedPaymentState) {
+                             toast.error('Please select a state');
+                             return;
+                        }
+                        
+                        // Save form data to localStorage
+                        const formData = {
+                            type: 'delivery',
+                            street_address: address,
+                            city: city,
+                            state: selectedPaymentState,
+                            landmark: landmark,
+                            phone_number: phoneNumber
+                        };
+                        localStorage.setItem('delivery_form_data', JSON.stringify(formData));
+                        
+                        // Initiate Payment
+                        initiatePaymentMutation.mutate(selectedPaymentState);
+                    }}
+                    disabled={!isDeliveryFormValid || initiatePaymentMutation.isPending}
+                    className={`w-full py-3.5 px-4 rounded-xl font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
+                        isDeliveryFormValid
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-lg'
+                            : 'bg-gray-300 cursor-not-allowed'
+                    }`}
+                >
+                    {initiatePaymentMutation.isPending ? 'Processing...' : `Pay & Save Delivery ${selectedFee ? `(₦${(Number(selectedFee) + ((Number(selectedFee)*0.015))).toLocaleString()})` : ''}`}
+                    <ChevronRight className="w-4 h-4" />
+                </button>
+            ) : (
+                <button
+                    onClick={handleSave}
+                    disabled={!isDeliveryFormValid}
+                    className={`w-full py-3.5 px-4 rounded-xl font-semibold text-white transition-all active:scale-[0.98] ${
+                        isDeliveryFormValid
+                        ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:shadow-lg'
+                        : 'bg-gray-300 cursor-not-allowed'
+                    }`}
+                >
+                    Save Delivery Information
+                </button>
+            )}
+            
             <button
               onClick={onClose}
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 border border-slate-300 hover:border-slate-400 transition-all active:scale-[0.98] font-semibold text-gray-900"

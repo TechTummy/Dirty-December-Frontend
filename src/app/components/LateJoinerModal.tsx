@@ -112,7 +112,7 @@ export function LateJoinerModal({
               <div className="flex-1">
                 <h3 className="font-bold text-gray-900 mb-1">Option 2: Reserve for Next Year</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  Skip this year's cycle and secure your spot for Detty December {nextYear}
+                  Skip this year's cycle and secure your spot for Belleza Detty December {nextYear}
                 </p>
               </div>
             </div>

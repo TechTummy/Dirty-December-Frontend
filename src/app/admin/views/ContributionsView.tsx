@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, Download, DollarSign, User, Image as ImageIcon, Loader } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, Download, DollarSign, User, Image as ImageIcon, Loader, Truck, Layers } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card } from '../../components/Card';
@@ -29,6 +29,7 @@ interface Contribution {
 }
 
 export function ContributionsView({ packageId, onBack }: ContributionsViewProps) {
+  const [activeTab, setActiveTab] = useState<'contributions' | 'delivery'>('contributions');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterMonth, setFilterMonth] = useState('all');
@@ -41,10 +42,18 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     - Filter by packageId if the API returns all transactions
   */
   
-  // Fetch Transactions
-  const { data: transactionsData, isLoading: isLoadingTransactions, refetch } = useQuery({
+  // Fetch Transactions (Contributions)
+  const { data: transactionsData, isLoading: isLoadingTransactions, refetch: refetchContributions } = useQuery({
     queryKey: ['admin-transactions', packageId],
     queryFn: () => admin.getTransactions({ package_id: packageId }),
+    enabled: activeTab === 'contributions'
+  });
+
+  // Fetch Delivery Transactions
+  const { data: deliveryData, isLoading: isLoadingDelivery, refetch: refetchDelivery } = useQuery({
+    queryKey: ['admin-delivery-transactions'],
+    queryFn: () => admin.getDeliveryTransactions(),
+    enabled: activeTab === 'delivery'
   });
 
   // Approve Mutation
@@ -52,7 +61,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     mutationFn: admin.approveTransaction,
     onSuccess: () => {
       toast.success('Transaction approved successfully');
-      refetch();
+      if (activeTab === 'contributions') refetchContributions();
+      else refetchDelivery();
       setSelectedContribution(null);
     },
     onError: (error: any) => {
@@ -65,7 +75,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     mutationFn: admin.declineTransaction,
     onSuccess: () => {
       toast.success('Transaction declined');
-      refetch();
+      if (activeTab === 'contributions') refetchContributions();
+      else refetchDelivery();
       setSelectedContribution(null);
     },
     onError: (error: any) => {
@@ -78,7 +89,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const contributions: Contribution[] = Array.isArray(rawContributions) ? rawContributions.map((t: any) => ({
     id: t.id?.toString() || t.transaction_id || `TRX-${Math.random()}`,
     userId: t.user?.id?.toString() || t.user_id?.toString() || '0',
-    userName: t.user?.name || 'Unknown User',
+    userName: t.user?.name || t.user?.first_name ? `${t.user?.first_name} ${t.user?.last_name || ''}` : 'Unknown User',
     userEmail: t.user?.email || 'No Email',
     userPhone: t.user?.phone || 'No Phone',
     // Derive month from created_at since it's not in the response directly
@@ -93,6 +104,27 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     time: t.created_at ? new Date(t.created_at).toLocaleTimeString() : 'N/A',
     proofUrl: t.proof_url || '' 
   })) : [];
+
+  const rawDelivery = deliveryData?.data?.data || [];
+  const deliveries: Contribution[] = Array.isArray(rawDelivery) ? rawDelivery.map((t: any) => ({
+    id: t.id?.toString(),
+    userId: t.user?.id?.toString() || '0',
+    userName: t.user ? `${t.user.first_name || ''} ${t.user.last_name || ''}`.trim() || t.user.name : 'Unknown User',
+    userEmail: t.user?.email || 'No Email',
+    userPhone: t.user?.phone || 'No Phone',
+    month: 'Delivery',
+    amount: Number(t.amount) || 0,
+    quantity: 1,
+    status: t.status === 'approved' ? 'confirmed' : (t.status || 'pending'),
+    date: t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : 'N/A',
+    transactionId: t.transaction_id || 'N/A',
+    paymentMethod: 'Paystack', // Delivery usually Paystack
+    reference: t.reference || 'N/A',
+    time: t.created_at ? new Date(t.created_at).toLocaleTimeString() : 'N/A',
+    proofUrl: ''
+  })) : [];
+
+  const currentList = activeTab === 'contributions' ? contributions : deliveries;
 
   // Fetch Package Details
   const { data: packageApiResponse, isLoading: isLoadingPackage } = useQuery({
@@ -138,7 +170,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     declineMutation.mutate(contributionId);
   };
 
-  const filteredContributions = contributions.filter(contribution => {
+  const filteredContributions = currentList.filter(contribution => {
     const matchesSearch = contribution.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contribution.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contribution.reference.toLowerCase().includes(searchTerm.toLowerCase());
@@ -148,12 +180,12 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   });
 
   const stats = {
-    total: contributions.length,
-    pending: contributions.filter(c => c.status === 'pending').length,
-    confirmed: contributions.filter(c => c.status === 'confirmed').length,
-    declined: contributions.filter(c => c.status === 'declined').length,
-    totalAmount: contributions.reduce((sum, c) => sum + c.amount, 0),
-    confirmedAmount: contributions.filter(c => c.status === 'confirmed').reduce((sum, c) => sum + c.amount, 0)
+    total: currentList.length,
+    pending: currentList.filter(c => c.status === 'pending').length,
+    confirmed: currentList.filter(c => c.status === 'confirmed').length,
+    declined: currentList.filter(c => c.status === 'declined').length,
+    totalAmount: currentList.reduce((sum, c) => sum + c.amount, 0),
+    confirmedAmount: currentList.filter(c => c.status === 'confirmed').reduce((sum, c) => sum + c.amount, 0)
   };
 
   const getStatusBadge = (status: string) => {
@@ -240,7 +272,37 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       </div>
 
       {/* Stats Cards */}
-      {isLoadingTransactions ? (
+      {/* Tabs */}
+      <div className="flex p-1 bg-slate-100 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab('contributions')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'contributions'
+              ? 'bg-white text-purple-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Contributions
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('delivery')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'delivery'
+              ? 'bg-white text-purple-700 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Truck className="w-4 h-4" />
+            Delivery Fees
+          </div>
+        </button>
+      </div>
+
+      {isLoadingTransactions || isLoadingDelivery ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
            {[...Array(4)].map((_, i) => (
              <div key={i} className="h-32 bg-slate-200 rounded-2xl"></div>
@@ -293,7 +355,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       {/* Contributions Table */}
       <Card className="border-0 shadow-lg">
         <div className="mb-6">
-          <h2 className="font-bold text-gray-900 text-lg mb-4">Contribution Submissions</h2>
+          <h2 className="font-bold text-gray-900 text-lg mb-4">{activeTab === 'contributions' ? 'Contribution Submissions' : 'Delivery Payments'}</h2>
           
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -424,8 +486,15 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">User</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Month</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Slots</th>
+                {activeTab === 'contributions' && (
+                    <>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Month</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Slots</th>
+                    </>
+                )}
+                {activeTab === 'delivery' && (
+                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
+                )}
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Amount</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Payment Method</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Reference</th>
@@ -443,16 +512,27 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                       <p className="text-xs text-gray-500">{contribution.userPhone}</p>
                     </div>
                   </td>
-                  <td className="py-4 px-4">
-                    <p className="font-medium text-gray-700">{contribution.month}</p>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                        {contribution.quantity} {contribution.quantity === 1 ? 'slot' : 'slots'}
-                      </span>
-                    </div>
-                  </td>
+                  {activeTab === 'contributions' && (
+                      <>
+                        <td className="py-4 px-4">
+                            <p className="font-medium text-gray-700">{contribution.month}</p>
+                        </td>
+                        <td className="py-4 px-4">
+                            <div className="flex items-center gap-1.5">
+                            <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                                {contribution.quantity} {contribution.quantity === 1 ? 'slot' : 'slots'}
+                            </span>
+                            </div>
+                        </td>
+                      </>
+                  )}
+                   {activeTab === 'delivery' && (
+                      <td className="py-4 px-4">
+                            <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                                Delivery
+                            </span>
+                      </td>
+                  )}
                   <td className="py-4 px-4">
                     <p className="font-semibold text-gray-900">₦{contribution.amount.toLocaleString()}</p>
                   </td>

@@ -14,6 +14,8 @@ interface Transaction {
   reference?: string;
   time?: string;
   created_at?: string;
+  payment_month?: number;
+  payment_year?: string;
 }
 
 interface TransactionDrawerProps {
@@ -182,12 +184,18 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Contribution Month</span>
                     <span className="text-sm font-semibold text-gray-900">
-                       {selectedTransaction.date 
-                         ? new Date(selectedTransaction.date).toLocaleDateString('default', { month: 'long', year: 'numeric' })
-                         : (selectedTransaction.created_at
-                            ? new Date(selectedTransaction.created_at).toLocaleDateString('default', { month: 'long', year: 'numeric' })
-                            : `${selectedTransaction.month} ${new Date().getFullYear()}`)
-                       }
+                       {selectedTransaction.payment_month 
+                         ? (() => {
+                             const date = new Date();
+                             date.setMonth(selectedTransaction.payment_month - 1);
+                             return `${date.toLocaleString('default', { month: 'long' })} ${selectedTransaction.payment_year || ''}`;
+                           })()
+                         : (selectedTransaction.date 
+                             ? new Date(selectedTransaction.date).toLocaleDateString('default', { month: 'long', year: 'numeric' })
+                             : (selectedTransaction.created_at
+                                ? new Date(selectedTransaction.created_at).toLocaleDateString('default', { month: 'long', year: 'numeric' })
+                                : `${selectedTransaction.month} ${new Date().getFullYear()}`))
+                        }
                     </span>
                   </div>
                 </div>
@@ -219,9 +227,21 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
             // Transaction List View
             <div className="space-y-3">
               {transactions.map((transaction, index) => {
-                // Safely derive month if not present
-                const txDate = transaction.date ? new Date(transaction.date) : (transaction.created_at ? new Date(transaction.created_at) : new Date());
-                const monthName = txDate.toLocaleString('default', { month: 'long' });
+                // Determine Month Name
+                let monthName = '';
+                let year = '';
+                
+                if (transaction.payment_month) {
+                   const date = new Date();
+                   date.setMonth(transaction.payment_month - 1);
+                   monthName = date.toLocaleString('default', { month: 'long' });
+                   year = transaction.payment_year || new Date().getFullYear().toString();
+                } else {
+                   const txDate = transaction.date ? new Date(transaction.date) : (transaction.created_at ? new Date(transaction.created_at) : new Date());
+                   monthName = txDate.toLocaleString('default', { month: 'long' });
+                   year = txDate.getFullYear().toString();
+                }
+
                 const shortMonth = monthName.substring(0, 3).toUpperCase();
                 const displayDate = transaction.date || (transaction.created_at ? new Date(transaction.created_at).toLocaleDateString() : 'Unknown Date');
 
@@ -244,7 +264,7 @@ export function TransactionDrawer({ isOpen, onClose, transactions, onRetry }: Tr
                           {shortMonth}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{monthName} {txDate.getFullYear()}</p>
+                          <p className="font-semibold text-gray-900">{monthName} {year}</p>
                           <p className="text-sm text-gray-500">{displayDate}</p>
                         </div>
                       </div>

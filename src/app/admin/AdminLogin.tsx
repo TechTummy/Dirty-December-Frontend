@@ -26,17 +26,19 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
       });
 
       if (response.data?.token) {
-        localStorage.setItem('auth_token', response.data.token);
-        localStorage.setItem('user_data', JSON.stringify(response.data.user));
-        
-        // Optional: Check for admin role if your API returns it
-        // if (response.data.user.role !== 'admin') { throw new Error('Unauthorized'); }
+        // Enforce Admin Role
+        if (response.data.user.role !== 'admin') {
+          throw new Error('Unauthorized access: Admins only');
+        }
 
+        localStorage.setItem('admin_auth_token', response.data.token);
+        localStorage.setItem('admin_data', JSON.stringify(response.data.user));
+        
         onLogin();
       }
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response?.data?.message || 'Invalid credentials');
+      toast.error(error.message || error.response?.data?.message || 'Invalid credentials');
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +52,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
             <Shield className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Admin Portal</h1>
-          <p className="text-purple-200">Detty December Management</p>
+          <p className="text-purple-200">Belleza Detty December Management</p>
         </div>
 
         <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur">

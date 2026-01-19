@@ -50,7 +50,7 @@ function VideoCard({ title, description, thumbnail, duration, onClick }: VideoCa
 export function LearnSection() {
   const videos = [
     {
-      title: 'How to Use Detty December App',
+      title: 'How to Use Belleza Detty December App',
       description: 'Complete walkthrough of the app features, making contributions, and tracking your benefits.',
       thumbnail: 'https://images.unsplash.com/photo-1764664281863-f736f2d942bd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2JpbGUlMjBhcHAlMjB0dXRvcmlhbHxlbnwxfHx8fDE3Njc2ODMyNzd8MA&ixlib=rb-4.1.0&q=80&w=1080',
       duration: '5:24'

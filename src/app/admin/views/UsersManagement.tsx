@@ -25,6 +25,9 @@ interface User {
   deliveryLga?: string;
   quantity?: number;
   packageId?: string | number;
+  isReceived?: boolean;
+  receivedAt?: string;
+  receivedPhoto?: string;
 }
 
 
@@ -45,10 +48,14 @@ export function UsersManagement() {
     status: 'active',
     quantity: 1
   });
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
 
   const { data: usersData, isLoading, refetch } = useQuery({
-    queryKey: ['adminUsers'],
-    queryFn: admin.getUsers,
+    queryKey: ['adminUsers', page, perPage],
+    queryFn: () => admin.getUsers({ page, per_page: perPage }),
   });
 
   const { data: packagesData } = useQuery({
@@ -102,11 +109,22 @@ export function UsersManagement() {
     },
   });
 
-  // API returns paginated response: { data: { data: [...] } }
-  // or sometimes non-paginated: { data: [...] }
-  const rawUsers = Array.isArray(usersData?.data) 
-    ? usersData.data 
-    : (usersData?.data?.data || []);
+  // API returns paginated response: { data: { data: [...], current_page: 1, ... } }
+  // The structure is typically: response.data.data (array) and response.data (meta)
+  // But our api.ts returns response.data, so usersData IS the full object containing { data: [...], ... }
+  
+  const rawUsers = Array.isArray(usersData?.data?.data) 
+    ? usersData.data.data 
+    : (Array.isArray(usersData?.data) ? usersData.data : []);
+
+  const paginationMeta = usersData?.data ? {
+    current_page: usersData.data.current_page || 1,
+    last_page: usersData.data.last_page || 1,
+    total: usersData.data.total || 0,
+    from: usersData.data.from || 0,
+    to: usersData.data.to || 0,
+    per_page: usersData.data.per_page || 15
+  } : null;
 
   const users: User[] = rawUsers.map((u: any) => {
     // Parse amounts (API returns strings like "5000.00")
@@ -138,7 +156,10 @@ export function UsersManagement() {
       deliveryType: (u.delivery_detail?.type === 'delivery' || u.delivery_method === 'delivery') ? 'delivery' : 'pickup', 
       deliveryAddress: u.delivery_detail?.street_address || u.street_address || '',
       deliveryState: u.delivery_detail?.state || u.state || '',
-      deliveryLga: u.delivery_detail?.city || u.city || '' // API docs/response show 'city' in delivery_detail, mapped to LGA for now or City
+      deliveryLga: u.delivery_detail?.city || u.city || '', // API docs/response show 'city' in delivery_detail, mapped to LGA for now or City
+      isReceived: u.delivery_detail?.is_received || false,
+      receivedAt: u.delivery_detail?.received_at,
+      receivedPhoto: u.delivery_detail?.received_photo ? `https://api.dettydecember.adeshinaotutuloro.com/storage/${u.delivery_detail.received_photo}` : undefined
     };
   });
 
@@ -364,7 +385,15 @@ export function UsersManagement() {
                     <span className="text-white font-bold text-lg">{user.name.split(' ').map(n => n[0]).join('')}</span>
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900">{user.name}</h3>
+                    <div className="flex items-center gap-2">
+                       <h3 className="font-bold text-gray-900">{user.name}</h3>
+                       {user.isReceived && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded border border-emerald-100">
+                            <CheckCircle className="w-2.5 h-2.5" />
+                            Received
+                          </span>
+                       )}
+                    </div>
                     <p className="text-sm text-gray-500">{user.phone}</p>
                   </div>
                 </div>
@@ -443,7 +472,15 @@ export function UsersManagement() {
                         <span className="text-white font-bold text-sm">{user.name.split(' ').map(n => n[0]).join('')}</span>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 text-sm whitespace-nowrap">{user.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-gray-900 text-sm whitespace-nowrap">{user.name}</p>
+                          {user.isReceived && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded border border-emerald-100">
+                              <CheckCircle className="w-2.5 h-2.5" />
+                              Received
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -524,26 +561,74 @@ export function UsersManagement() {
         </Card>
       )}
 
-      {/* Pagination */}
-      {filteredUsers.length > 0 && (
-        <div className="flex items-center justify-center gap-2">
-          <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm">
-            Previous
-          </button>
-          <button className="px-4 py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-lg shadow-lg shadow-purple-500/30 font-medium text-sm">
-            1
-          </button>
-          <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm">
-            2
-          </button>
-          <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm">
-            3
-          </button>
-          <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm">
-            Next
-          </button>
+      {/* Pagination Controls */}
+        <div className="border-t border-gray-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            {paginationMeta ? (
+              <span>
+                Showing <span className="font-medium text-gray-900">{paginationMeta.from}</span> to <span className="font-medium text-gray-900">{paginationMeta.to}</span> of <span className="font-medium text-gray-900">{paginationMeta.total}</span> results
+              </span>
+            ) : (
+              <span>Showing all {filteredUsers.length} results</span>
+            )}
+            
+            <div className="flex items-center gap-2 border-l border-gray-300 pl-4">
+              <span>Rows per page:</span>
+              <select
+                value={perPage}
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1); // Reset to first page on change
+                }}
+                className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-1"
+              >
+                <option value={15}>15</option>
+                <option value={30}>30</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1 || isLoading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+               {Array.from({ length: Math.min(5, paginationMeta?.last_page || 1) }, (_, i) => {
+                  let pNum = i + 1;
+                  if (paginationMeta && paginationMeta.last_page > 5) {
+                     if (page > 3) pNum = page - 2 + i;
+                     if (pNum > paginationMeta.last_page) pNum = paginationMeta.last_page - (4 - i);
+                  }
+                  
+                  return (
+                    <button
+                      key={pNum}
+                      onClick={() => setPage(pNum)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                        page === pNum
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+               })}
+            </div>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={!paginationMeta || page >= paginationMeta.last_page || isLoading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
-      )}
 
       {/* Add/Edit User Modal */}
       {showModal && !viewingUser && (
@@ -826,6 +911,56 @@ export function UsersManagement() {
                     )}
                   </div>
                 </div>
+
+                {/* Package Receipt - Only if received */}
+                {viewingUser.isReceived && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                       <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4 text-emerald-600" />
+                       </div>
+                       Package Receipt
+                    </h3>
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                       <div className="flex items-center justify-between mb-4">
+                          <span className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-full">
+                             <CheckCircle className="w-4 h-4" />
+                             VERIFIED RECEIVED
+                          </span>
+                          {viewingUser.receivedAt && (
+                             <span className="text-sm text-emerald-700">
+                                {new Date(viewingUser.receivedAt).toLocaleDateString()}
+                             </span>
+                          )}
+                       </div>
+                       
+                       {viewingUser.receivedPhoto ? (
+                          <div className="mt-4">
+                             <p className="text-xs text-emerald-700 mb-2 font-medium">Verification Photo</p>
+                             <div className="relative rounded-lg overflow-hidden border border-emerald-200 aspect-video max-w-sm">
+                                <img 
+                                   src={viewingUser.receivedPhoto} 
+                                   alt="Package Verification" 
+                                   className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                                   <a 
+                                      href={viewingUser.receivedPhoto} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="px-4 py-2 bg-white rounded-lg shadow-lg text-sm font-bold text-gray-900"
+                                   >
+                                      View Full Size
+                                   </a>
+                                </div>
+                             </div>
+                          </div>
+                       ) : (
+                          <p className="text-sm text-gray-500 italic mt-2">No verification photo attached</p>
+                       )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

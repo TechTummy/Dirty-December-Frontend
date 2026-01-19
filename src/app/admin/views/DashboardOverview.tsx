@@ -1,9 +1,9 @@
-import { TrendingUp, Users, DollarSign, Package, CheckCircle } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Package, CheckCircle, Bell, Loader } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { packages } from '../../data/packages';
 
 import { admin } from '../../../lib/api';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,9 +14,20 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: statsData, isLoading } = useQuery({
     queryKey: ['adminDashboardStats'],
     queryFn: admin.getDashboardStats,
+  });
+
+  const reminderMutation = useMutation({
+    mutationFn: admin.triggerReminders,
+    onSuccess: () => {
+      toast.success('Reminders triggered successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to trigger reminders');
+    }
   });
 
   const stats = statsData?.data || {};
@@ -36,14 +47,17 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   // Calculate distribution
   const totalUsers = Object.values(userCountsMap).reduce((a: any, b: any) => a + b, 0) as number;
   
-  const packageDistribution = [
-    { name: 'Basic Bundle', count: userCountsMap['Basic Bundle'] || 0, color: 'bg-purple-500' },
-    { name: 'Family Bundle', count: userCountsMap['Family Bundle'] || 0, color: 'bg-emerald-500' },
-    { name: 'Premium Bundle', count: userCountsMap['Premium Bundle'] || 0, color: 'bg-amber-500' }
-  ].map(pkg => ({
-    ...pkg,
-    percentage: totalUsers > 0 ? Math.round((pkg.count / totalUsers) * 100) : 0
-  })).sort((a, b) => b.count - a.count);
+  const packageDistribution = rawPackages.map((pkg: any, index: number) => {
+    const colors = ['bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-blue-500', 'bg-rose-500', 'bg-cyan-500'];
+    const count = userCountsMap[pkg.name] || 0;
+    
+    return {
+      name: pkg.name,
+      count: count,
+      color: colors[index % colors.length],
+      percentage: totalUsers > 0 ? Math.round((count / totalUsers) * 100) : 0
+    };
+  }).sort((a: any, b: any) => b.count - a.count);
 
   const packageSummaries = rawPackages.map((pkg: any) => {
      // Find matching frontend definition
@@ -69,6 +83,26 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
 
   return (
     <div className="space-y-6">
+      {/* Header Actions */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            if (confirm('Are you sure you want to trigger payment reminders for all users?')) {
+              reminderMutation.mutate();
+            }
+          }}
+          disabled={reminderMutation.isPending}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-xl transition-colors font-medium disabled:opacity-50"
+        >
+          {reminderMutation.isPending ? (
+            <Loader className="w-4 h-4 animate-spin" />
+          ) : (
+            <Bell className="w-4 h-4" />
+          )}
+          Trigger Monthly Reminders
+        </button>
+      </div>
+
       {/* Package Summary Cards */}
       <div>
         <h2 className="font-bold text-gray-900 text-lg mb-4">Package Performance</h2>
@@ -198,7 +232,7 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
           <h2 className="font-bold text-gray-900 text-lg mb-6">Package Distribution</h2>
           
           <div className="space-y-4">
-            {packageDistribution.map((pkg, index) => (
+            {packageDistribution.map((pkg: { name: string; count: number; color: string; percentage: number }, index: number) => (
               <div key={index}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700">{pkg.name}</span>

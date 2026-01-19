@@ -15,6 +15,7 @@ interface ProfileProps {
   userPhone?: string;
   selectedPackage?: string;
   userStatus?: 'active' | 'reserved';
+  userState?: string;
   onProfileUpdate?: () => void;
 }
 
@@ -33,13 +34,16 @@ export function Profile({
   userPhone,
   selectedPackage = 'Basic Bundle',
   userStatus = 'active',
+  userState = '',
   onProfileUpdate,
 }: ProfileProps) {
   
   // Profile edit state
+  // Profile edit state
   const [profileData, setProfileData] = useState({
     name: userName,
-    phone: userPhone || ''
+    phone: userPhone || '',
+    state: ''
   });
 
   // Delivery info state
@@ -62,9 +66,10 @@ export function Profile({
   useEffect(() => {
     setProfileData({
       name: userName,
-      phone: userPhone || ''
+      phone: userPhone || '',
+      state: userState || ''
     });
-  }, [userName, userPhone]);
+  }, [userName, userPhone, userState]);
 
   // Fetch saved delivery settings
   const { data: deliverySettings, isLoading: isLoadingSettings } = useQuery({
@@ -227,6 +232,27 @@ export function Profile({
                   onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">State of Residence</label>
+              <div className="relative">
+                <select
+                  value={profileData.state}
+                  onChange={(e) => setProfileData({ ...profileData, state: e.target.value })}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer appearance-none"
+                >
+                  <option value="">Select State</option>
+                  {nigerianStates.map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+                <div className="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
               </div>
             </div>
 
