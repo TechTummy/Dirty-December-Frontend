@@ -288,7 +288,15 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
              }
            }
          } catch (error: any) {
-           toast.error(error.response?.data?.message || 'Failed to complete registration');
+           // Check for validation errors object
+           if (error.response?.data?.errors) {
+              const errors = error.response.data.errors;
+              const firstField = Object.keys(errors)[0];
+              const firstError = errors[firstField][0];
+              toast.error(firstError || 'Validation failed');
+           } else {
+              toast.error(error.response?.data?.message || 'Failed to complete registration');
+           }
            console.error(error);
          } finally {
            setIsLoading(false);
