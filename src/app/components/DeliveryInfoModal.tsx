@@ -190,11 +190,17 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo, delive
             </div>
 
             {/* Delivery Address Form */}
+            
             {method === 'delivery' && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-2 text-purple-700 mb-2">
                   <MapPin className="w-5 h-5" />
                   <p className="font-semibold">Delivery Address</p>
+                </div>
+                <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 my-2">
+                  <p className="text-xs font-bold text-orange-700 text-center uppercase">
+                    You are responsible for picking it up at the park in your state
+                  </p>
                 </div>
 
                 <div>
@@ -276,12 +282,25 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo, delive
                 </div>
 
                 {!isPaid && selectedPaymentState && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-                        <CreditCard className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+                    <div className={`border rounded-xl p-4 flex gap-3 ${
+                        selectedFee ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+                    }`}>
+                        <CreditCard className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                            selectedFee ? 'text-amber-700' : 'text-red-700'
+                        }`} />
                          <div>
-                            <p className="font-semibold text-amber-900 text-sm">Payment Required</p>
-                            <p className="text-xs text-amber-700 mt-1">
-                                You will be redirected to Paystack to pay the delivery fee for {selectedPaymentState} after clicking save.
+                            <p className={`font-semibold text-sm ${
+                                selectedFee ? 'text-amber-900' : 'text-red-900'
+                            }`}>
+                                {selectedFee ? 'Payment Required' : 'Fee Not Set'}
+                            </p>
+                            <p className={`text-xs mt-1 ${
+                                selectedFee ? 'text-amber-700' : 'text-red-700'
+                            }`}>
+                                {selectedFee 
+                                    ? `You will be redirected to Paystack to pay the delivery fee for ${selectedPaymentState} after clicking save.`
+                                    : `The delivery fee for ${selectedPaymentState} has not been set yet. Please contact support or check back later.`
+                                }
                             </p>
                         </div>
                     </div>
@@ -315,6 +334,11 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo, delive
                              return;
                         }
                         
+                        if (!selectedFee) {
+                             toast.error('Delivery fee unavailable for this state');
+                             return;
+                        }
+                        
                         // Save form data to localStorage
                         const formData = {
                             type: 'delivery',
@@ -329,14 +353,14 @@ export function DeliveryInfoModal({ isOpen, onClose, onSave, currentInfo, delive
                         // Initiate Payment
                         initiatePaymentMutation.mutate(selectedPaymentState);
                     }}
-                    disabled={!isDeliveryFormValid || initiatePaymentMutation.isPending}
+                    disabled={!isDeliveryFormValid || initiatePaymentMutation.isPending || !selectedFee}
                     className={`w-full py-3.5 px-4 rounded-xl font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
-                        isDeliveryFormValid
+                        isDeliveryFormValid && selectedFee
                             ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-lg'
                             : 'bg-gray-300 cursor-not-allowed'
                     }`}
                 >
-                    {initiatePaymentMutation.isPending ? 'Processing...' : `Pay & Save Delivery ${selectedFee ? `(₦${(Number(selectedFee) + ((Number(selectedFee)*0.015))).toLocaleString()})` : ''}`}
+                     {initiatePaymentMutation.isPending ? 'Processing...' : `Pay & Save Delivery ${selectedFee ? `(₦${(Number(selectedFee) + ((Number(selectedFee)*0.015))).toLocaleString()})` : ''}`}
                     <ChevronRight className="w-4 h-4" />
                 </button>
             ) : (
