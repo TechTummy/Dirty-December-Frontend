@@ -45,7 +45,7 @@ export function Login({ onLogin, onBackToLanding, onForgotPassword }: LoginProps
 
       onLogin();
     } catch (error: any) {
-      toast.error(error.message || error.response?.data?.message || 'Login failed. Please check your credentials.');
+      toast.error(error.response?.data?.message || error.message || 'Login failed. Please check your credentials.');
       console.error(error);
     } finally {
       setIsLoading(false);
