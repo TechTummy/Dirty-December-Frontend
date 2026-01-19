@@ -32,6 +32,11 @@ export function Login({ onLogin, onBackToLanding, onForgotPassword }: LoginProps
 
       // Store token and user data
       if (response.data?.token) {
+        // Enforce User Role
+        if (response.data.user.role !== 'user') {
+          throw new Error('Please use the Admin Portal');
+        }
+
         localStorage.setItem('auth_token', response.data.token);
       }
       if (response.data?.user) {
@@ -40,7 +45,7 @@ export function Login({ onLogin, onBackToLanding, onForgotPassword }: LoginProps
 
       onLogin();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      toast.error(error.message || error.response?.data?.message || 'Login failed. Please check your credentials.');
       console.error(error);
     } finally {
       setIsLoading(false);

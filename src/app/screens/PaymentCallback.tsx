@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from 'lucide-react';
-import { payment } from '../../lib/api';
+import { payment, user } from '../../lib/api';
 import { toast } from 'sonner';
 
 export function PaymentCallback() {
@@ -23,15 +23,40 @@ export function PaymentCallback() {
          return;
       }
 
+      const paymentType = localStorage.getItem('pending_payment_type') || 'contribution';
+
       try {
-        await payment.verifyContribution(reference);
-        toast.success('Payment verified successfully!');
+        if (paymentType === 'delivery') {
+            await user.verifyDeliveryPayment(reference);
+            toast.success('Delivery fee verified successfully!');
+            
+            // Check for saved form data to complete the process
+            const savedFormData = localStorage.getItem('delivery_form_data');
+            if (savedFormData) {
+                try {
+                    const formData = JSON.parse(savedFormData);
+                    await user.saveDeliverySettings(formData);
+                    toast.success('Delivery details saved successfully!');
+                    localStorage.removeItem('delivery_form_data');
+                } catch (saveError) {
+                    console.error('Failed to save delivery details:', saveError);
+                    toast.error('Payment verified, but failed to save details. Please try saving again.');
+                }
+            } else {
+                 // Fallback if no data (legacy or error)
+                 localStorage.setItem('open_delivery_modal', 'true');
+            }
+        } else {
+            await payment.verifyContribution(reference);
+            toast.success('Contribution verified successfully!');
+        }
       } catch (error: any) {
         console.error(error);
-        // Even if verification fails (e.g. already verified), we generally want to let them into the dashboard
-        // but show the error.
         toast.error(error.response?.data?.message || 'Payment verification failed');
       } finally {
+        // Clear pending flags
+        localStorage.removeItem('pending_payment_type');
+        
         // Add a small delay so user sees the state
         setTimeout(() => {
             navigate('/dashboard');

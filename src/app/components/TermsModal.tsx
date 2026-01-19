@@ -54,7 +54,7 @@ export function TermsModal({ isOpen, onAccept }: TermsModalProps) {
             <div>
               <h3 className="font-bold text-gray-900 mb-2">1. Introduction</h3>
               <p>
-                Welcome to Detty December! By creating an account and using our platform, you agree to be bound by these Terms and Conditions. Please read them carefully.
+                Welcome to Belleza Detty December! By creating an account and using our platform, you agree to be bound by these Terms and Conditions. Please read them carefully.
               </p>
             </div>
 
@@ -117,7 +117,7 @@ export function TermsModal({ isOpen, onAccept }: TermsModalProps) {
             <div>
               <h3 className="font-bold text-gray-900 mb-2">10. Limitation of Liability</h3>
               <p>
-                Detty December is not liable for indirect damages, market price fluctuations, or circumstances beyond our control. Our total liability is limited to the amount you have contributed.
+                Belleza Detty December is not liable for indirect damages, market price fluctuations, or circumstances beyond our control. Our total liability is limited to the amount you have contributed.
               </p>
             </div>
 

@@ -15,6 +15,7 @@ import { AdminLogin } from './admin/AdminLogin';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { InstallPWA } from './components/InstallPWA';
 import { TermsModal } from './components/TermsModal';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard' | 'profile';
 type UserStatus = 'active' | 'reserved';
@@ -33,8 +34,10 @@ export default function App() {
     const savedUser = localStorage.getItem('user_data');
     return savedUser ? JSON.parse(savedUser).name : 'Chioma';
   });
-
-  // ... (existing code)
+  const [userState, setUserState] = useState(() => {
+    const savedUser = localStorage.getItem('user_data');
+    return savedUser ? (JSON.parse(savedUser).state || '') : '';
+  });
 
   const [userStatus, setUserStatus] = useState<UserStatus>(() => {
     const savedUser = localStorage.getItem('user_data');
@@ -99,7 +102,9 @@ export default function App() {
       const user = JSON.parse(savedUser);
       setUserName(user.name || 'User');
       setUserEmail(user.email || '');
+      setUserEmail(user.email || '');
       setUserPhone(user.phone || '');
+      setUserState(user.state || '');
       setUserStatus(user.status || 'active');
       setQuantity(user.slots || 1);
       setPackageId(user.package_id);
@@ -134,6 +139,31 @@ export default function App() {
     navigate('/dashboard');
   };
 
+  const handleLogout = (redirectPath: string = '/') => {
+    // Clean up USER auth and data
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    
+    // Reset local state to defaults
+    setUserName('Chioma');
+    setUserEmail('');
+    setUserPhone('');
+    setUserState('');
+    setUserStatus('active');
+    setQuantity(1);
+    setPackageId(undefined);
+    setSelectedPackage('Basic Bundle');
+    
+    navigate(redirectPath);
+  };
+
+  const handleAdminLogout = () => {
+    // Clean up ADMIN auth and data
+    localStorage.removeItem('admin_auth_token');
+    localStorage.removeItem('admin_data');
+    navigate('/admin/login');
+  }
+
   const handleAcceptTerms = () => {
     setHasAcceptedTerms(true);
     setShowTermsModal(false);
@@ -146,9 +176,13 @@ export default function App() {
         <Route path="/admin/login" element={
           <AdminLogin onLogin={() => navigate('/admin/dashboard')} />
         } />
-        <Route path="/admin/dashboard/*" element={
-          <AdminDashboard onLogout={() => navigate('/')} />
-        } />
+        
+        {/* Protected Admin Routes */}
+        <Route element={<ProtectedRoute redirectPath="/admin/login" isAdmin={true} />}>
+           <Route path="/admin/dashboard/*" element={
+            <AdminDashboard onLogout={handleAdminLogout} />
+           } />
+        </Route>
 
         {/* User Routes - Wrapped in Layout */}
         <Route path="*" element={
@@ -181,47 +215,53 @@ export default function App() {
                   onBack={() => navigate('/')} 
                 />
               } />
-              <Route path="/dashboard" element={
-                <Dashboard 
-                  onNavigate={handleNavigate}
-                  userName={userName}
-                  onLogout={() => navigate('/')}
-                  userStatus={userStatus}
-                  selectedPackage={selectedPackage}
-                  quantity={quantity}
-                  packageId={packageId}
-                />
-              } />
-              <Route path="/contribute" element={
-                <Contribute 
-                  onBack={() => navigate('/dashboard')} 
-                  userPackage={selectedPackage}
-                  userQuantity={quantity}
-                  userEmail={userEmail}
-                />
-              } />
-              <Route path="/value-preview" element={
-                <ValuePreview 
-                  onBack={() => navigate('/dashboard')} 
-                  selectedPackage={selectedPackage} 
-                  packageId={packageId}
-                />
-              } />
-              <Route path="/announcements" element={
-                <Announcements onBack={() => navigate('/dashboard')} />
-              } />
-              <Route path="/payment/callback" element={<PaymentCallback />} />
-              <Route path="/profile" element={
-                <Profile 
-                  onNavigate={handleNavigate}
-                  userName={userName}
-                  userEmail={userEmail}
-                  userPhone={userPhone}
-                  selectedPackage={selectedPackage}
-                  userStatus={userStatus}
-                  onProfileUpdate={refreshUserState}
-                />
-              } />
+              
+              {/* Protected User Routes */}
+              <Route element={<ProtectedRoute redirectPath="/login" />}>
+                <Route path="/dashboard" element={
+                  <Dashboard 
+                    onNavigate={handleNavigate}
+                    userName={userName}
+                    onLogout={() => handleLogout('/')}
+                    userStatus={userStatus}
+                    selectedPackage={selectedPackage}
+                    quantity={quantity}
+                    packageId={packageId}
+                  />
+                } />
+                <Route path="/contribute" element={
+                  <Contribute 
+                    onBack={() => navigate('/dashboard')} 
+                    userPackage={selectedPackage}
+                    userQuantity={quantity}
+                    userEmail={userEmail}
+                  />
+                } />
+                <Route path="/value-preview" element={
+                  <ValuePreview 
+                    onBack={() => navigate('/dashboard')} 
+                    selectedPackage={selectedPackage} 
+                    packageId={packageId}
+                  />
+                } />
+                <Route path="/announcements" element={
+                  <Announcements onBack={() => navigate('/dashboard')} />
+                } />
+                <Route path="/payment/callback" element={<PaymentCallback />} />
+                <Route path="/profile" element={
+                  <Profile 
+                    onNavigate={handleNavigate}
+                    userName={userName}
+                    userEmail={userEmail}
+                    userPhone={userPhone}
+                    selectedPackage={selectedPackage}
+                    userStatus={userStatus}
+                    userState={userState}
+                    onProfileUpdate={refreshUserState}
+                  />
+                } />
+              </Route>
+
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

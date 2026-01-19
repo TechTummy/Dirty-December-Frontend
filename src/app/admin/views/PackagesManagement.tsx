@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, Plus, Eye, Package as PackageIcon } from 'lucide-react';
+import { Edit, Plus, Eye, Package as PackageIcon, Trash2 } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
 import { packages as initialPackages, Package } from '../../data/packages';
@@ -29,6 +29,17 @@ export function PackagesManagement() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to create package');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => admin.deletePackage(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminPackages'] });
+      toast.success('Package deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete package');
     }
   });
 
@@ -188,6 +199,17 @@ export function PackagesManagement() {
               >
                 <Edit className="w-4 h-4" />
                 <span className="text-sm font-medium">Edit</span>
+              </button>
+              <button 
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this package? This action cannot be undone.')) {
+                    deleteMutation.mutate(pkg.id);
+                  }
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-200 transition-colors"
+                title="Delete Package"
+              >
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </Card>

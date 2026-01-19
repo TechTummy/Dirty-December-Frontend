@@ -54,6 +54,35 @@ api.interceptors.response.use(
     }
 );
 
+// Create a separate axios instance for Admin API
+export const adminApi = axios.create({
+    baseURL: '/',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
+// Request interceptor for Admin API (uses admin_auth_token)
+adminApi.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('admin_auth_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Response interceptor for Admin API
+adminApi.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        console.error('Admin API Error:', error.response?.data || error.message);
+        return Promise.reject(error);
+    }
+);
+
 // Auth API methods
 export const auth = {
     sendOtp: async (phone: string) => {
@@ -72,11 +101,11 @@ export const auth = {
         const response = await api.post('/api/v1/users/auth/select-package', { registration_token, package_id });
         return response.data;
     },
-    completeRegistration: async (data: { registration_token: string; name: string; phone: string; email: string; password?: string }) => {
+    completeRegistration: async (data: { registration_token: string; name: string; phone: string; email: string; password?: string; state?: string }) => {
         const response = await api.post('/api/v1/users/auth/complete-registration', data);
         return response.data;
     },
-    makeReservation: async (data: { registration_token: string; name: string; phone: string; email: string; password?: string }) => {
+    makeReservation: async (data: { registration_token: string; name: string; phone: string; email: string; password?: string; state?: string }) => {
         const response = await api.post('/api/v1/users/auth/make-reservation', data);
         return response.data;
     },
@@ -113,83 +142,111 @@ export const payment = {
 // Admin API methods
 export const admin = {
     getDashboardStats: async () => {
-        const response = await api.get('/api/v1/admin/dashboard');
+        const response = await adminApi.get('/api/v1/admin/dashboard');
         return response.data;
     },
-    getUsers: async () => {
-        const response = await api.get('/api/v1/admin/users');
+    triggerReminders: async () => {
+        const response = await adminApi.post('/api/v1/admin/reminders/trigger');
+        return response.data;
+    },
+    getUsers: async (params?: { page?: number; per_page?: number }) => {
+        const response = await adminApi.get('/api/v1/admin/users', { params });
         return response.data;
     },
     getPackages: async () => {
-        const response = await api.get('/api/v1/admin/packages');
+        const response = await adminApi.get('/api/v1/admin/packages');
         return response.data;
     },
     getPackageById: async (id: string) => {
-        const response = await api.get(`/api/v1/admin/packages/${id}`);
+        const response = await adminApi.get(`/api/v1/admin/packages/${id}`);
         return response.data;
     },
     getAnnouncements: async () => {
-        const response = await api.get('/api/v1/admin/announcements');
+        const response = await adminApi.get('/api/v1/admin/announcements');
         return response.data;
     },
     createAnnouncement: async (data: any) => {
-        const response = await api.post('/api/v1/admin/announcements', data);
+        const response = await adminApi.post('/api/v1/admin/announcements', data);
         return response.data;
     },
     updateAnnouncement: async (id: number, data: any) => {
-        const response = await api.put(`/api/v1/admin/announcements/${id}`, data);
+        const response = await adminApi.put(`/api/v1/admin/announcements/${id}`, data);
         return response.data;
     },
     deleteAnnouncement: async (id: number) => {
-        const response = await api.delete(`/api/v1/admin/announcements/${id}`);
+        const response = await adminApi.delete(`/api/v1/admin/announcements/${id}`);
         return response.data;
     },
     createPackage: async (data: any) => {
-        const response = await api.post('/api/v1/admin/packages', data);
+        const response = await adminApi.post('/api/v1/admin/packages', data);
         return response.data;
     },
     updatePackage: async (id: string, data: any) => {
-        const response = await api.put(`/api/v1/admin/packages/${id}`, data);
+        const response = await adminApi.put(`/api/v1/admin/packages/${id}`, data);
+        return response.data;
+    },
+    deletePackage: async (id: string) => {
+        const response = await adminApi.delete(`/api/v1/admin/packages/${id}`);
         return response.data;
     },
     getTransactions: async (params?: { package_id?: string; status?: string }) => {
-        const response = await api.get('/api/v1/admin/transactions', { params });
+        const response = await adminApi.get('/api/v1/admin/transactions', { params });
         return response.data;
     },
     approveTransaction: async (id: string) => {
-        const response = await api.post(`/api/v1/admin/transactions/${id}/approve`);
+        const response = await adminApi.post(`/api/v1/admin/transactions/${id}/approve`);
         return response.data;
     },
     declineTransaction: async (id: string) => {
-        const response = await api.post(`/api/v1/admin/transactions/${id}/decline`);
+        const response = await adminApi.post(`/api/v1/admin/transactions/${id}/decline`);
         return response.data;
     },
     createUser: async (data: any) => {
-        const response = await api.post('/api/v1/admin/users', data);
+        const response = await adminApi.post('/api/v1/admin/users', data);
         return response.data;
     },
     updateUser: async (id: number, data: any) => {
-        const response = await api.put(`/api/v1/admin/users/${id}`, data);
+        const response = await adminApi.put(`/api/v1/admin/users/${id}`, data);
         return response.data;
     },
     deleteUser: async (id: number) => {
-        const response = await api.delete(`/api/v1/admin/users/${id}`);
+        const response = await adminApi.delete(`/api/v1/admin/users/${id}`);
         return response.data;
     },
-    getReservedUsers: async () => {
-        const response = await api.get('/api/v1/admin/users/reserved');
+    getReservedUsers: async (params?: { page?: number; per_page?: number }) => {
+        const response = await adminApi.get('/api/v1/admin/users/reserved', { params });
         return response.data;
     },
     suspendUser: async (id: number) => {
-        const response = await api.post(`/api/v1/admin/users/${id}/suspend`);
+        const response = await adminApi.post(`/api/v1/admin/users/${id}/suspend`);
         return response.data;
     },
     activateUser: async (id: number) => {
-        const response = await api.post(`/api/v1/admin/users/${id}/activate`);
+        const response = await adminApi.post(`/api/v1/admin/users/${id}/activate`);
         return response.data;
     },
     changeUserPassword: async (id: number, password: string) => {
-        const response = await api.post(`/api/v1/admin/users/${id}/change-password`, { password });
+        const response = await adminApi.post(`/api/v1/admin/users/${id}/change-password`, { password });
+        return response.data;
+    },
+    getDeliveryFees: async () => {
+        const response = await adminApi.get('/api/v1/admin/delivery-fees');
+        return response.data;
+    },
+    createDeliveryFee: async (data: { state: string; fee: number }) => {
+        const response = await adminApi.post('/api/v1/admin/delivery-fees', data);
+        return response.data;
+    },
+    updateDeliveryFee: async (id: number, data: { state?: string; fee?: number }) => {
+        const response = await adminApi.put(`/api/v1/admin/delivery-fees/${id}`, data);
+        return response.data;
+    },
+    deleteDeliveryFee: async (id: number) => {
+        const response = await adminApi.delete(`/api/v1/admin/delivery-fees/${id}`);
+        return response.data;
+    },
+    getDeliveryTransactions: async (params?: { page?: number; status?: string }) => {
+        const response = await adminApi.get('/api/v1/admin/transactions/delivery', { params });
         return response.data;
     },
 };
@@ -200,7 +257,7 @@ export const user = {
         const response = await api.get('/api/v1/users/dashboard');
         return response.data;
     },
-    updateProfile: async (data: { name: string; phone: string }) => {
+    updateProfile: async (data: { name: string; phone: string; state?: string }) => {
         const response = await api.put('/api/v1/users/profile', data);
         return response.data;
     },
@@ -212,12 +269,40 @@ export const user = {
         const response = await api.get('/api/v1/users/notifications');
         return response.data;
     },
+    getDeliveryFees: async () => {
+        const response = await api.get('/api/v1/users/delivery/fees');
+        return response.data;
+    },
     getDeliverySettings: async () => {
         const response = await api.get('/api/v1/users/delivery-settings');
         return response.data;
     },
     saveDeliverySettings: async (data: any) => {
         const response = await api.post('/api/v1/users/delivery-settings', data);
+        return response.data;
+    },
+    getPaymentReminderStatus: async () => {
+        const response = await api.get('/api/v1/users/settings/payment-reminder-status');
+        return response.data;
+    },
+    togglePaymentReminder: async () => {
+        const response = await api.post('/api/v1/users/settings/toggle-payment-reminder');
+        return response.data;
+    },
+    verifyPackage: async (formData: FormData) => {
+        const response = await api.post('/api/v1/users/package/verify', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+    initiateDeliveryPayment: async (state: string) => {
+        const response = await api.post('/api/v1/users/delivery/pay', { state });
+        return response.data;
+    },
+    verifyDeliveryPayment: async (reference: string) => {
+        const response = await api.get(`/api/v1/users/delivery/verify?reference=${reference}`);
         return response.data;
     },
 };

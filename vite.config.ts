@@ -14,9 +14,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Dirty December',
-        short_name: 'DirtyDec',
-        description: 'Detty December - Smart Contribution Platform',
+        name: 'Belleza Detty December',
+        short_name: 'Belleza',
+        description: 'Belleza Detty December - Smart Contribution Platform',
         theme_color: '#ffffff',
         icons: [
           {

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { LayoutDashboard, Users, Package, Megaphone, Menu, X, LogOut, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Megaphone, Menu, X, LogOut, Calendar, Truck } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { DashboardOverview } from './views/DashboardOverview';
 import { UsersManagement } from './views/UsersManagement';
 import { PackagesManagement } from './views/PackagesManagement';
 import { AnnouncementsManagement } from './views/AnnouncementsManagement';
+import { DeliveryManagement } from './views/DeliveryManagement';
 import { PackageDetailsView } from './views/PackageDetailsView';
 import { ContributionsView } from './views/ContributionsView';
 import { Reserved2027 } from './views/Reserved2027';
@@ -18,6 +19,7 @@ const navItems = [
   { id: '/admin/dashboard/users', label: 'Users', icon: Users },
   { id: '/admin/dashboard/reserved2027', label: `Reserved for ${new Date().getFullYear() + 1}`, icon: Calendar },
   { id: '/admin/dashboard/packages', label: 'Packages', icon: Package },
+  { id: '/admin/dashboard/delivery', label: 'Delivery', icon: Truck },
   { id: '/admin/dashboard/announcements', label: 'Announcements', icon: Megaphone },
 ] as const;
 
@@ -50,7 +52,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             </div>
             <div>
               <h2 className="font-bold text-gray-900">Admin Portal</h2>
-              <p className="text-xs text-gray-500">Detty December</p>
+              <p className="text-xs text-gray-500">Belleza Detty December</p>
             </div>
           </div>
         </div>
@@ -108,7 +110,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             </div>
             <div>
               <h2 className="font-bold text-gray-900">Admin Portal</h2>
-              <p className="text-xs text-gray-500">Detty December</p>
+              <p className="text-xs text-gray-500">Belleza Detty December</p>
             </div>
           </div>
           <button
@@ -197,6 +199,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             } />
             <Route path="users" element={<UsersManagement />} />
             <Route path="packages" element={<PackagesManagement />} />
+            <Route path="delivery" element={<DeliveryManagement />} />
             <Route path="announcements" element={<AnnouncementsManagement />} />
             <Route path="reserved2027" element={<Reserved2027 />} />
             

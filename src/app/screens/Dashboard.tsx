@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, Gift, MessageCircle, Sparkles, Calendar, LogOut, User, Clock, Receipt, MapPin, Truck, UserCog, Loader } from 'lucide-react';
+import { Bell, ChevronRight, Gift, MessageCircle, Sparkles, Calendar, LogOut, User, Clock, Receipt, MapPin, Truck, UserCog, Loader, CheckCircle } from 'lucide-react';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
@@ -6,10 +6,11 @@ import { Partners } from '../components/Partners';
 import { Testimonials } from '../components/Testimonials';
 import { TransactionDrawer } from '../components/TransactionDrawer';
 import { DeliveryInfoModal, DeliveryInfo } from '../components/DeliveryInfoModal';
+import { PackageVerificationModal } from '../components/PackageVerificationModal';
 import { LearnSection } from '../components/LearnSection';
 import { packages as staticPackages } from '../data/packages';
 import { mergeBackendPackages } from '../utils/packageUtils';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { user, auth } from '../../lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -30,6 +31,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
   const [showMenu, setShowMenu] = useState(false);
   const [showTransactionDrawer, setShowTransactionDrawer] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const queryClient = useQueryClient();
   
   // Fetch Transactions
@@ -47,7 +49,9 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
 
   // Use API transactions or fallback to empty array
   const rawHistory = transactionsData?.data?.data || transactionsData?.data || [];
-  const contributionHistory = Array.isArray(rawHistory) ? rawHistory : [];
+  const contributionHistory = Array.isArray(rawHistory) 
+    ? rawHistory.filter((t: any) => t.type !== 'delivery') 
+    : [];
 
   // Fetch Delivery Settings
   const { data: deliverySettingsData } = useQuery({
@@ -86,6 +90,24 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
     }
   });
 
+  // Fetch Payment Reminder Status
+  const { data: reminderStatusData, isLoading: isLoadingReminder } = useQuery({
+    queryKey: ['payment-reminder-status'],
+    queryFn: user.getPaymentReminderStatus,
+  });
+
+  // Toggle Payment Reminder Mutation
+  const toggleReminderMutation = useMutation({
+    mutationFn: user.togglePaymentReminder,
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['payment-reminder-status'] });
+      toast.success(data.message || 'Payment reminder preference updated');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update reminder settings');
+    }
+  });
+
   // Get the user's package dynamically
   // 1. Get backend packages list
   const backendList = packagesData?.data?.packages && Array.isArray(packagesData.data.packages) 
@@ -104,11 +126,16 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
   
   const stats = dashboardStatsData?.data || {};
 
-  // Use API stats if available, otherwise fallback to calculations or zero
-  const totalContributed = stats.total_contributed ?? contributionHistory.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0);
-  const confirmedContributions = stats.contributions_count ?? contributionHistory.filter((c: any) => c.status === 'confirmed' || c.status === 'success').length;
+  // Calculate stats strictly from filtered history to avoid Backend including delivery fees
+  const totalContributed = contributionHistory
+    .filter((c: any) => c.status === 'confirmed' || c.status === 'success' || c.status === 'approved')
+    .reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0);
+  const confirmedContributions = contributionHistory.filter((c: any) => c.status === 'confirmed' || c.status === 'success' || c.status === 'approved').length;
   
-  const progressPercent = (confirmedContributions / 12) * 100;
+  // TODO: Change back to 12 after testing
+  const REQUIRED_CONTRIBUTIONS = 12; 
+  
+  const progressPercent = (confirmedContributions / REQUIRED_CONTRIBUTIONS) * 100;
   const nextYear = new Date().getFullYear() + 1;
   const currentYear = new Date().getFullYear();
   
@@ -118,7 +145,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
   const projectedSavings = userPackage.savings * quantity;
 
   // Next Payment Info
-  const isCompleted = confirmedContributions >= 12;
+  const isCompleted = confirmedContributions >= REQUIRED_CONTRIBUTIONS;
   const nextPaymentMonth = stats.next_payment_date 
     ? new Date(stats.next_payment_date).toLocaleString('default', { month: 'long' }) 
     : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][Math.min(confirmedContributions, 11)];
@@ -206,7 +233,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Your Spot is Secured!</h2>
               <p className="text-gray-600 leading-relaxed">
-                You're all set for Detty December {nextYear}. We'll notify you when registration opens in January.
+                You're all set for Belleza Detty December {nextYear}. We'll notify you when registration opens in January.
               </p>
             </div>
           </Card>
@@ -278,7 +305,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
           </Card>
 
           {/* Partners Card */}
-          <Partners variant="compact" />
+          {/* <Partners variant="compact" /> */}
 
           {/* Testimonials Section - replacing Recent Activity */}
           <Testimonials />
@@ -398,39 +425,41 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
           <div className="mb-4">
              <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-semibold text-gray-700">Monthly Progress</span>
-                <span className="text-xs font-bold text-purple-700">{confirmedContributions}/12 Paid</span>
+                <span className="text-xs font-bold text-purple-700">{confirmedContributions}/{REQUIRED_CONTRIBUTIONS} Paid</span>
              </div>
-             <div className="grid grid-cols-6 gap-2 sm:gap-3">
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((monthIndex) => {
-                   const isPaid = stats.paid_months_indices?.includes(monthIndex);
-                   const isNext = !isPaid && !isCompleted && (monthIndex === (stats.paid_months_indices?.length || 0) + 1);
-                   const monthName = new Date(0, monthIndex - 1).toLocaleString('default', { month: 'short' });
-                   
-                   return (
-                      <div 
-                        key={monthIndex}
-                        className={`
-                           relative flex flex-col items-center justify-center py-2 rounded-lg text-[10px] font-medium border transition-all
-                           ${isPaid 
-                              ? `bg-gradient-to-br ${userPackage.gradient} text-white border-transparent shadow-sm` 
-                              : isNext
-                                 ? 'bg-purple-50 text-purple-700 border-purple-200 ring-1 ring-purple-200 ring-offset-1'
-                                 : 'bg-slate-50 text-gray-400 border-slate-100'
-                           }
-                        `}
-                      >
-                         <span>{monthName}</span>
-                         {isPaid && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /></div>}
-                      </div>
-                   );
-                })}
-             </div>
+              <div className="grid grid-cols-6 gap-2 sm:gap-3">
+                 {Array.from({ length: 12 }, (_, i) => i + 1).map((monthIndex) => {
+                    // Since specific month tracking is tricky without backend indices, 
+                    // we assume sequential payments for the frontend display based on count
+                    const isPaid = monthIndex <= confirmedContributions;
+                    const isNext = !isPaid && !isCompleted && (monthIndex === confirmedContributions + 1);
+                    const monthName = new Date(0, monthIndex - 1).toLocaleString('default', { month: 'short' });
+                    
+                    return (
+                       <div 
+                         key={monthIndex}
+                         className={`
+                            relative flex flex-col items-center justify-center py-2 rounded-lg text-[10px] font-medium border transition-all
+                            ${isPaid 
+                               ? `bg-gradient-to-br ${userPackage.gradient} text-white border-transparent shadow-sm` 
+                               : isNext
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200 ring-1 ring-purple-200 ring-offset-1'
+                                  : 'bg-slate-50 text-gray-400 border-slate-100'
+                            }
+                         `}
+                       >
+                          <span>{monthName}</span>
+                          {isPaid && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /></div>}
+                       </div>
+                    );
+                 })}
+              </div>
           </div>
           
           <p className="text-xs text-gray-500 font-medium mb-3">
              {isCompleted 
                 ? 'All monthly contributions completed!' 
-                : `${12 - confirmedContributions} months remaining`
+                : `${Math.max(0, REQUIRED_CONTRIBUTIONS - confirmedContributions)} months remaining`
              }
           </p>
 
@@ -459,7 +488,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
         <div className="mb-6">
           <button
             onClick={() => onNavigate('value-preview')}
-            className="group active:scale-95 transition-transform w-full"
+            className="group active:scale-95 transition-transform w-full mb-4"
           >
             <Card className="text-center border-0 shadow-md hover:shadow-lg transition-shadow">
               <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${userPackage.gradient} mx-auto mb-3 flex items-center justify-center shadow-lg ${userPackage.shadowColor}`}>
@@ -469,6 +498,21 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
               <p className="text-sm text-gray-600">See your {userPackage.name} benefits</p>
             </Card>
           </button>
+
+          {isCompleted && (
+             <button
+              onClick={() => setShowVerificationModal(true)}
+              className="group active:scale-95 transition-transform w-full"
+            >
+              <Card className="text-center border-0 shadow-sm hover:shadow-md transition-shadow bg-purple-50/50 border-purple-100">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 mx-auto mb-2 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-purple-600" />
+                </div>
+                <p className="font-semibold text-gray-900 text-sm">Verify Package Receipt</p>
+                <p className="text-xs text-gray-500">Confirm you've received your items</p>
+              </Card>
+            </button>
+          )}
         </div>
 
         {/* Next Payment Alert */}
@@ -490,9 +534,17 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
                 </div>
                 <StatusBadge status={isCompleted ? 'success' : 'pending'} />
               </div>
-              <label className="flex items-center gap-2 mt-3 cursor-pointer group">
-                <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
-                <span className="text-sm text-gray-700 group-hover:text-gray-900">Enable payment reminders</span>
+              <label className={`flex items-center gap-2 mt-3 cursor-pointer group ${isLoadingReminder ? 'opacity-50 pointer-events-none' : ''}`}>
+                <input 
+                  type="checkbox" 
+                  checked={reminderStatusData?.data?.payment_reminder_enabled || false}
+                  onChange={() => toggleReminderMutation.mutate()}
+                  disabled={isLoadingReminder || toggleReminderMutation.isPending}
+                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 transition-colors" 
+                />
+                <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                  {toggleReminderMutation.isPending ? 'Updating...' : 'Enable payment reminders'}
+                </span>
               </label>
             </div>
           </div>
@@ -575,8 +627,11 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
 
       {/* Sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto p-6 bg-white/80 backdrop-blur-xl border-t border-gray-200">
-        <GradientButton onClick={() => onNavigate('contribute')}>
-          Make Contribution
+        <GradientButton 
+          onClick={() => onNavigate('contribute')}
+          disabled={isCompleted}
+        >
+          {isCompleted ? 'All Contributions Paid' : 'Make Contribution'}
         </GradientButton>
       </div>
 
@@ -597,6 +652,20 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
         onClose={() => setShowDeliveryModal(false)}
         onSave={handleSaveDeliveryInfo}
         currentInfo={deliveryInfo}
+        deliveryPaid={deliveryInfo?.state ? true : false} // If we have a state reserved in backend, they paid. Or we add a field in API.
+        // NOTE: Ideally the API should tell us if they paid. 
+        // For now, if they are setting it, they might have just paid.
+        // Correct approach: The modal handles 'isPaid' state internally if just paid.
+        // But if returning user, we need to know. Assuming if 'state' is present in delivery settings, they paid?
+        // Let's rely on the internal modal logic for "just paid" and existing data for "already set".
+      />
+
+      <PackageVerificationModal
+        isOpen={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={() => {
+           // Maybe refetch something or show a persistent success state
+        }}
       />
     </div>
   );

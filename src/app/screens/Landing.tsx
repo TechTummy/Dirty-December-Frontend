@@ -51,7 +51,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-2 rounded-full mb-6 border border-purple-100">
             <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium">50+ Active Members</span>
+            <span className="text-sm font-medium">Over 500+ Active Members</span>
           </div>
           
           <h1 className="text-5xl mb-4 tracking-tight relative px-12">
@@ -70,14 +70,14 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
             <Star className="absolute -bottom-5 right-2 w-5 h-5 text-indigo-400 animate-pulse" style={{ animationDelay: '1.8s' }} />
             
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Detty December
+              Belleza Detty December
             </span>
           </h1>
           <p className="text-xl text-gray-900 mb-3 font-medium mt-8">
             Smart Savings, Better Value
           </p>
           <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">
-            Contribute monthly and receive bulk-purchased provisions worth 30%+ more in December
+            Contribute monthly and receive bulk-purchased provisions in December
           </p>
         </div>
 
@@ -202,7 +202,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
         </div>
 
         {/* Partners Section */}
-        <Partners />
+        {/* <Partners /> */}
 
         {/* Testimonials Section */}
         <div className="mt-8 -mx-6 px-6">
@@ -260,16 +260,6 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
         <p className="text-center text-xs text-gray-500 mt-3">
           Join today and start your savings journey
         </p>
-        
-        {/* Admin Access Link */}
-        {onAdminAccess && (
-          <button
-            onClick={onAdminAccess}
-            className="w-full text-center text-xs text-gray-400 hover:text-purple-600 mt-2 transition-colors"
-          >
-            Admin Access
-          </button>
-        )}
       </div>
 
       {/* Benefits Modal */}

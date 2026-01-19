@@ -17,6 +17,14 @@ interface OnboardingProps {
   onBack?: () => void;
 }
 
+const nigerianStates = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
+  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa',
+  'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba',
+  'Yobe', 'Zamfara'
+];
+
 export function Onboarding({ onComplete, preSelectedPackageId, onBack }: OnboardingProps) {
   // Load initial state from localStorage if available
   const [step, setStep] = useState(() => {
@@ -35,6 +43,10 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const [email, setEmail] = useState(() => {
     const saved = localStorage.getItem('onboarding_state');
     return saved ? JSON.parse(saved).email || '' : '';
+  });
+  const [userState, setUserState] = useState(() => {
+    const saved = localStorage.getItem('onboarding_state');
+    return saved ? JSON.parse(saved).userState || '' : '';
   });
   const [password, setPassword] = useState('');
   const [registrationToken, setRegistrationToken] = useState<string | null>(() => {
@@ -84,13 +96,14 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
       phone,
       name,
       email,
+      userState,
       registrationToken,
       userChoice,
       selectedPackageId: selectedPackage?.id,
       quantity
     };
     localStorage.setItem('onboarding_state', JSON.stringify(stateToSave));
-  }, [step, phone, name, email, registrationToken, userChoice, selectedPackage, quantity]);
+  }, [step, phone, name, email, userState, registrationToken, userChoice, selectedPackage, quantity]);
 
   const clearProgress = () => {
     localStorage.removeItem('onboarding_state');
@@ -220,7 +233,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   };
 
   const handleProfileSubmit = async (action: 'pay' | 'reserve' = 'pay') => {
-    if (name.trim() && email.trim() && password.length >= 6) {
+    if (name.trim() && email.trim() && password.length >= 6 && userState) {
        if (registrationToken) {
          setSubmittingAction(action);
          setIsLoading(true);
@@ -232,7 +245,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                name,
                phone, 
                email,
-               password
+               password,
+               state: userState
              });
              
              if (response.data?.token) {
@@ -251,7 +265,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                name,
                phone, 
                email,
-               password
+               password,
+               state: userState
              });
              
              // Save auth token and user data immediately
@@ -289,7 +304,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
 
   const handlePaymentSuccess = () => {
     setShowPaymentModal(false);
-    toast.success('Payment successful! Welcome to Detty December.');
+    toast.success('Payment successful! Welcome to Belleza Detty December.');
     localStorage.removeItem('onboarding_state'); // Clear persistence on success
     
     // Refresh user state to ensure status is updated to 'active'
@@ -461,7 +476,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                   Spot Reserved!
                 </h2>
                 <p className="text-gray-600 leading-relaxed mb-8 max-w-sm mx-auto">
-                  You're all set for Detty December {new Date().getFullYear() + 1}. 
+                  You're all set for Belleza Detty December {new Date().getFullYear() + 1}. 
                   We'll remind you when registration opens in January.
                 </p>
                 
@@ -599,8 +614,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 How Many Slots?
               </h2>
               <p className="text-gray-600 leading-relaxed">
-                Contributing for yourself and others? Select how many people you're paying for
-              </p>
+        Contributing for yourself and others? Select how many slots you will be paying for              </p>
             </div>
 
             {/* Selected Package Summary */}
@@ -651,10 +665,10 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               {quantity > 1 && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
                   <p className="text-sm text-blue-900 mb-2">
-                    <span className="font-semibold">Contributing for {quantity} people</span>
+                    <span className="font-semibold">Contributing for {quantity} {quantity === 1 ? 'slot' : 'slots'}</span>
                   </p>
                   <p className="text-xs text-blue-700">
-                    You're paying for {quantity} {quantity === 1 ? 'slot' : 'slots'}. Each person will receive their own package in December.
+                    You're paying for {quantity} {quantity === 1 ? 'slot' : 'slots'}. Each slot will receive the same package content  in December.
                   </p>
                 </div>
               )}
@@ -731,7 +745,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               </div>
             </div>
 
-            <Card className="mb-6 border-0 shadow-lg">
+             <Card className="mb-6 border-0 shadow-lg">
               <label className="block mb-3 text-sm font-semibold text-gray-900">
                 Full Name
               </label>
@@ -742,6 +756,29 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 onChange={(e) => setName(e.target.value)}
                 className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
               />
+            </Card>
+
+            <Card className="mb-6 border-0 shadow-lg">
+              <label className="block mb-3 text-sm font-semibold text-gray-900">
+                State of Residence
+              </label>
+              <div className="relative">
+                <select
+                  value={userState}
+                  onChange={(e) => setUserState(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all cursor-pointer appearance-none bg-white"
+                >
+                  <option value="">Select your state</option>
+                  {nigerianStates.map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+                <div className="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
             </Card>
 
             <Card className="mb-6 border-0 shadow-lg">
@@ -888,7 +925,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
             <div className="flex flex-col gap-3">
               <GradientButton 
                 onClick={() => handleProfileSubmit('pay')} 
-                disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}
+                disabled={!name.trim() || !email.trim() || password.length < 6 || !userState || isLoading}
               >
                 {userChoice === 'catchup' ? 'Continue to Payment' : (submittingAction === 'pay' ? 'Creating Account...' : 'Start Contributing')}
               </GradientButton>
@@ -896,7 +933,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               {!userChoice && (
                 <button 
                   onClick={() => handleProfileSubmit('reserve')}
-                  disabled={!name.trim() || !email.trim() || password.length < 6 || isLoading}
+                  disabled={!name.trim() || !email.trim() || password.length < 6 || !userState || isLoading}
                   className="w-full py-4 text-purple-700 font-semibold bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submittingAction === 'reserve' ? (

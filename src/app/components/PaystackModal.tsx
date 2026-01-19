@@ -55,13 +55,33 @@ export function PaystackModal({ amount, packageName, quantity, onClose }: Paysta
                  <span className="text-gray-500 text-sm">Amount</span>
                  <span className="font-semibold text-gray-900">₦{amount.toLocaleString()}</span>
                </div>
-               <div className="flex justify-between items-center mb-3">
-                 <span className="text-gray-500 text-sm">Transaction Fee (1.5%)</span>
-                 <span className="font-semibold text-gray-900">₦{(amount * 0.015).toLocaleString()}</span>
+               <div className="flex justify-between items-start mb-3">
+                 <div className="text-left">
+                   <span className="text-gray-500 text-sm">Transaction Fee (7.5%)</span>
+                   <ul className="text-[10px] text-gray-500 mt-1 space-y-0.5">
+                     <li className="flex items-center gap-1.5">
+                       <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                       Platform charges
+                     </li>
+                     <li className="flex items-center gap-1.5">
+                       <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                       Packaging of provisions
+                     </li>
+                     <li className="flex items-center gap-1.5">
+                       <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                       Bank charges
+                     </li>
+                     <li className="flex items-center gap-1.5">
+                       <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                       Planning logistics
+                     </li>
+                   </ul>
+                 </div>
+                 <span className="font-semibold text-gray-900">₦{(amount * 0.075).toLocaleString()}</span>
                </div>
                <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                  <span className="font-bold text-gray-900">Total to Pay</span>
-                 <span className="text-2xl font-bold text-gray-900">₦{(amount * 1.015).toLocaleString()}</span>
+                 <span className="text-2xl font-bold text-gray-900">₦{(amount * 1.075).toLocaleString()}</span>
                </div>
                <p className="text-xs text-gray-500 mt-2 text-center">{packageName} × {quantity} Slots</p>
             </div>

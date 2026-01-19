@@ -37,9 +37,12 @@ export function Reserved2027() {
   const nextYear = new Date().getFullYear() + 1;
   const queryClient = useQueryClient();
   
-  const { data: usersData, isLoading: isUsersLoading } = useQuery({
-    queryKey: ['adminReservedUsers'],
-    queryFn: admin.getReservedUsers,
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
+
+  const { data: usersData, isLoading: isUsersLoading, refetch } = useQuery({
+    queryKey: ['adminReservedUsers', page, perPage],
+    queryFn: () => admin.getReservedUsers({ page, per_page: perPage }),
   });
 
   const { data: packagesData } = useQuery({
@@ -66,21 +69,20 @@ export function Reserved2027() {
     status: 'reserved'
   });
 
-  const reservedUsers: ReservedUser[] = Array.isArray(usersData?.data) 
-    ? usersData.data.map((u: any) => ({
-      id: u.id,
-      name: u.name,
-      phone: u.phone,
-      email: u.email,
-      package: u.package?.name || 'No Package',
-      packageId: u.package_id || u.package?.id,
-      reservationDate: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      deliveryType: (u.delivery_detail?.type === 'delivery' || u.delivery_method === 'delivery') ? 'delivery' : 'pickup',
-      deliveryAddress: u.delivery_detail?.street_address || u.street_address || '',
-      deliveryState: u.delivery_detail?.state || u.state || '',
-      deliveryLga: u.delivery_detail?.city || u.city || ''
-    }))
-    : (usersData?.data?.data || []).map((u: any) => ({
+  const rawUsers = Array.isArray(usersData?.data?.data) 
+    ? usersData.data.data 
+    : (Array.isArray(usersData?.data) ? usersData.data : []);
+
+  const paginationMeta = usersData?.data ? {
+    current_page: usersData.data.current_page || 1,
+    last_page: usersData.data.last_page || 1,
+    total: usersData.data.total || 0,
+    from: usersData.data.from || 0,
+    to: usersData.data.to || 0,
+    per_page: usersData.data.per_page || 15
+  } : null;
+
+  const reservedUsers: ReservedUser[] = rawUsers.map((u: any) => ({
       id: u.id,
       name: u.name,
       phone: u.phone,
@@ -481,6 +483,75 @@ export function Reserved2027() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="border-t border-gray-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            {paginationMeta ? (
+              <span>
+                Showing <span className="font-medium text-gray-900">{paginationMeta.from}</span> to <span className="font-medium text-gray-900">{paginationMeta.to}</span> of <span className="font-medium text-gray-900">{paginationMeta.total}</span> results
+              </span>
+            ) : (
+              <span>Showing all {filteredUsers.length} results</span>
+            )}
+            
+            <div className="flex items-center gap-2 border-l border-gray-300 pl-4">
+              <span>Rows per page:</span>
+              <select
+                value={perPage}
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1); // Reset to first page on change
+                }}
+                className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-1"
+              >
+                <option value={15}>15</option>
+                <option value={30}>30</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1 || isUsersLoading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+               {Array.from({ length: Math.min(5, paginationMeta?.last_page || 1) }, (_, i) => {
+                  let pNum = i + 1;
+                  if (paginationMeta && paginationMeta.last_page > 5) {
+                     if (page > 3) pNum = page - 2 + i;
+                     if (pNum > paginationMeta.last_page) pNum = paginationMeta.last_page - (4 - i);
+                  }
+                  
+                  return (
+                    <button
+                      key={pNum}
+                      onClick={() => setPage(pNum)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                        page === pNum
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+               })}
+            </div>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={!paginationMeta || page >= paginationMeta.last_page || isUsersLoading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </Card>
 
