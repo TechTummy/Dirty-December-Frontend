@@ -89,7 +89,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const contributions: Contribution[] = Array.isArray(rawContributions) ? rawContributions.map((t: any) => ({
     id: t.id?.toString() || t.transaction_id || `TRX-${Math.random()}`,
     userId: t.user?.id?.toString() || t.user_id?.toString() || '0',
-    userName: t.user?.name || t.user?.first_name ? `${t.user?.first_name} ${t.user?.last_name || ''}` : 'Unknown User',
+    userName: t.user?.name || (t.user?.first_name ? `${t.user.first_name} ${t.user.last_name || ''}`.trim() : 'Unknown User'),
     userEmail: t.user?.email || 'No Email',
     userPhone: t.user?.phone || 'No Phone',
     // Derive month from created_at since it's not in the response directly

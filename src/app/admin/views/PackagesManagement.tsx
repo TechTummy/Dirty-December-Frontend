@@ -152,13 +152,6 @@ export function PackagesManagement() {
                   <span className="text-white/80 pb-1">/year</span>
                 </div>
               </div>
-              
-              <div className="bg-white/20 backdrop-blur rounded-xl p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/90">Benefit Package Worth</span>
-                  <span className="font-bold text-xl">₦{pkg.estimatedRetailValue.toLocaleString()}</span>
-                </div>
-              </div>
             </div>
 
             <div className="space-y-2.5 mb-4">
