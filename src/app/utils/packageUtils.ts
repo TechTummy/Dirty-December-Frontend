@@ -52,7 +52,7 @@ const PREMIUM_STYLES = [
 
 export function mergeBackendPackages(backendPackages: BackendPackage[]): Package[] {
     if (!backendPackages || backendPackages.length === 0) {
-        return frontendPackages;
+        return [];
     }
 
     return backendPackages.map(bp => {

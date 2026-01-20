@@ -94,11 +94,20 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           
           <div className="space-y-4">
 
-            {isLoadingPackages && (!mergedPackages || mergedPackages.length === 0) ? (
-              // Loading skeleton could be here, but for now fallback to static or just show spinning state
+            {isLoadingPackages ? (
+              // Loading skeleton
               <div className="text-center py-10">
                  <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-2"></div>
                  <p className="text-gray-500 text-sm">Loading packages...</p>
+              </div>
+            ) : (!mergedPackages || mergedPackages.length === 0) ? (
+              // Empty State
+              <div className="text-center py-10 px-4 bg-slate-50 rounded-2xl border border-dashed border-gray-300">
+                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Gift className="w-6 h-6 text-gray-400" />
+                 </div>
+                 <h3 className="text-lg font-semibold text-gray-900 mb-1">No Packages Available</h3>
+                 <p className="text-sm text-gray-500">Registration is currently closed or no packages are active. Please check back later.</p>
               </div>
             ) : (
               mergedPackages.map((pkg) => (
@@ -130,13 +139,6 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
                     <div className="flex items-end gap-2 mb-1">
                       <span className="text-2xl font-bold">₦{pkg.yearlyTotal.toLocaleString()}</span>
                       <span className="text-white/80 pb-1">/year</span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white/20 backdrop-blur rounded-xl p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/90">Benefit Package Worth</span>
-                      <span className="font-bold text-xl">₦{pkg.estimatedRetailValue.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -251,7 +253,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
 
       {/* Sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto p-6 bg-white/80 backdrop-blur-xl border-t border-gray-200">
-        <GradientButton onClick={() => onGetStarted()}>
+        <GradientButton onClick={() => onGetStarted()} disabled={!mergedPackages || mergedPackages.length === 0}>
           <span className="flex items-center justify-center gap-2">
             Get Started
             <ArrowRight className="w-5 h-5" />

@@ -8,7 +8,6 @@ import { TransactionDrawer } from '../components/TransactionDrawer';
 import { DeliveryInfoModal, DeliveryInfo } from '../components/DeliveryInfoModal';
 import { PackageVerificationModal } from '../components/PackageVerificationModal';
 import { LearnSection } from '../components/LearnSection';
-import { packages as staticPackages } from '../data/packages';
 import { mergeBackendPackages } from '../utils/packageUtils';
 import { useState } from 'react';
 import { user, auth } from '../../lib/api';
@@ -118,13 +117,31 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
   const allPackages = mergeBackendPackages(backendList);
   
   // 3. Find match by ID (preferred) or name
-  // Note: staticPackages[0] is strictly a fallback if API fails completely and "Basic Bundle" isn't found
   const userPackage = (packageId ? allPackages.find(pkg => Number(pkg.id) === Number(packageId)) : null) || 
-                      allPackages.find(pkg => pkg.name === selectedPackage) || 
-                      staticPackages.find(p => p.name === 'Basic Bundle') || 
-                      staticPackages[0];
+                      allPackages.find(pkg => pkg.name === selectedPackage);
   
   const stats = dashboardStatsData?.data || {};
+
+  // Handle case where package is not found (API empty or loading)
+  if (!userPackage) {
+     if (packagesData?.isLoading) {
+        return (
+          <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          </div>
+        );
+     }
+     // Show error/empty state if not finding package
+     return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+           <div className="text-center">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Package Not Found</h2>
+              <p className="text-gray-600">We couldn't load your package details. Please contact support.</p>
+              <button onClick={() => window.location.reload()} className="mt-4 text-purple-600 font-semibold">Reload</button>
+           </div>
+        </div>
+     );
+  }
 
   // Calculate stats strictly from filtered history to avoid Backend including delivery fees
   const totalContributed = contributionHistory

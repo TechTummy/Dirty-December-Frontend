@@ -544,10 +544,25 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 </div>
 
                 <div className="space-y-4">
-                  {isPackagesLoading && !backendPackages ? (
+                  {isPackagesLoading ? (
                     <div className="text-center py-10">
                       <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-2"></div>
                       <p className="text-gray-500 text-sm">Loading packages...</p>
+                    </div>
+                  ) : (!displayPackages || displayPackages.length === 0) ? (
+                    // Empty State
+                    <div className="text-center py-10 px-4 bg-slate-50 rounded-2xl border border-dashed border-gray-300">
+                       <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <EyeOff className="w-6 h-6 text-gray-400" />
+                       </div>
+                       <h3 className="text-lg font-semibold text-gray-900 mb-1">No Packages Available</h3>
+                       <p className="text-sm text-gray-500">We couldn't find any active savings packages at the moment.</p>
+                       <button 
+                         onClick={() => window.location.reload()}
+                         className="mt-4 text-purple-600 font-medium text-sm hover:underline"
+                       >
+                         Reload Page
+                       </button>
                     </div>
                   ) : (
                     displayPackages.map((pkg) => (
@@ -585,13 +600,6 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                               <span className="text-white/80 pb-1">/year</span>
                             </div>
                           </div>
-                          
-                          <div className="bg-white/20 backdrop-blur rounded-xl p-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-white/90">Benefit Package Worth</span>
-                              <span className="font-bold text-xl">₦{pkg.estimatedRetailValue.toLocaleString()}</span>
-                            </div>
-                          </div>
                         </div>
 
                         {/* Benefits */}
@@ -607,7 +615,8 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                         </div>
                       </Card>
                     </button>
-                  )))}
+                  )))
+                  }
                 </div>
               </div>
             )}
