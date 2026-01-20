@@ -13,6 +13,7 @@ interface ProfileProps {
   userName: string;
   userEmail?: string;
   userPhone?: string;
+  packageId?: string | number;
   selectedPackage?: string;
   userStatus?: 'active' | 'reserved';
   userState?: string;
@@ -32,6 +33,7 @@ export function Profile({
   userName, 
   userEmail,
   userPhone,
+  packageId,
   selectedPackage = 'Basic Bundle',
   userStatus = 'active',
   userState = '',
@@ -71,7 +73,9 @@ export function Profile({
     : [];
 
   const allPackages = mergeBackendPackages(backendList);
-  const userPackage = allPackages.find(pkg => pkg.name === selectedPackage) || null;
+  // Match by ID first (more reliable), then by name
+  const userPackage = (packageId ? allPackages.find(pkg => Number(pkg.id) === Number(packageId)) : null) || 
+                      allPackages.find(pkg => pkg.name === selectedPackage) || null;
 
   useEffect(() => {
     setProfileData({
@@ -139,19 +143,21 @@ export function Profile({
     }
   });
   
-  if (!userPackage) {
-      // If we can't find the package, we can't properly render the profile badge/styles
-      // We can fallback to a generic loading or error
-      if (!packagesData) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-purple-600" /></div>;
-      
-      // If loaded but not found, maybe show a simplified profile without package specific styling?
-      // Or just a placeholder. For now, let's render a basic placeholder.
-      return (
-         <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-            <p className="text-gray-500">Loading profile data...</p>
-         </div>
-      );
-  }
+  // Safe fallback for display to prevent UI blocking
+  const displayPackage = userPackage || {
+    id: 'unknown',
+    name: 'No Active Category',
+    description: 'Please contact support',
+    monthlyAmount: 0,
+    yearlyTotal: 0,
+    estimatedRetailValue: 0,
+    savings: 0,
+    savingsPercent: 0,
+    benefits: [],
+    gradient: 'from-gray-400 to-gray-500',
+    shadowColor: 'shadow-gray-400/30',
+    badge: null
+  };
 
   const handleUpdateProfile = () => {
     updateProfileMutation.mutate(profileData);
@@ -318,8 +324,8 @@ export function Profile({
           <div className="space-y-4">
             <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
               <p className="text-xs text-purple-700 mb-1 font-medium">Current Package</p>
-              <div className={`inline-block px-3 py-1.5 rounded-full bg-gradient-to-r ${userPackage.gradient} mt-1`}>
-                <span className="text-sm font-bold text-white">{userPackage.name}</span>
+              <div className={`inline-block px-3 py-1.5 rounded-full bg-gradient-to-r ${displayPackage.gradient} mt-1`}>
+                <span className="text-sm font-bold text-white">{displayPackage.name}</span>
               </div>
               <p className="text-xs text-gray-500 mt-2">Contact admin to change your package</p>
             </div>
