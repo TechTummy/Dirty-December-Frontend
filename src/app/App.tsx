@@ -255,6 +255,7 @@ export default function App() {
                     userEmail={userEmail}
                     userPhone={userPhone}
                     selectedPackage={selectedPackage}
+                    packageId={packageId}
                     userStatus={userStatus}
                     userState={userState}
                     onProfileUpdate={refreshUserState}
