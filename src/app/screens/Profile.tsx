@@ -3,8 +3,8 @@ import { ArrowLeft, User, Mail, Phone, Package, Save, AlertCircle, CheckCircle, 
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card } from '../components/Card';
 import { GradientButton } from '../components/GradientButton';
-import { packages } from '../data/packages';
-import { user } from '../../lib/api';
+import { user, auth } from '../../lib/api';
+import { mergeBackendPackages } from '../utils/packageUtils';
 
 type Screen = 'landing' | 'login' | 'forgot-password' | 'onboarding' | 'dashboard' | 'contribute' | 'value-preview' | 'announcements' | 'admin-login' | 'admin-dashboard' | 'profile';
 
@@ -60,8 +60,18 @@ export function Profile({
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Get the user's package
-  const userPackage = packages.find(pkg => pkg.name === selectedPackage) || packages[0];
+  // Fetch packages for dynamic styling
+  const { data: packagesData } = useQuery({
+    queryKey: ['packages'],
+    queryFn: auth.getPackages,
+  });
+  
+  const backendList = packagesData?.data?.packages 
+    ? (Array.isArray(packagesData.data.packages) ? packagesData.data.packages : [])
+    : [];
+
+  const allPackages = mergeBackendPackages(backendList);
+  const userPackage = allPackages.find(pkg => pkg.name === selectedPackage) || null;
 
   useEffect(() => {
     setProfileData({
@@ -98,24 +108,13 @@ export function Profile({
       if (data?.data) {
         let newUser = data.data;
         // Check if nested user object exists (e.g. { data: { user: {...}, message: "..." } })
-        if (data.data.user) {
-           newUser = data.data.user;
-        }
+        if (newUser.user) newUser = newUser.user;
         
-        const savedUserStr = localStorage.getItem('user_data');
-        const savedUser = savedUserStr ? JSON.parse(savedUserStr) : {};
-        const updatedUser = { ...savedUser, ...newUser };
-        localStorage.setItem('user_data', JSON.stringify(updatedUser));
+        localStorage.setItem('user_data', JSON.stringify(newUser));
+        if (onProfileUpdate) onProfileUpdate();
       }
-      
-      setSuccessMessage('Profile updated successfully!');
+      setSuccessMessage('Profile updated successfully');
       setShowSuccessMessage(true);
-      
-      // Notify parent app to refresh state immediately
-      if (onProfileUpdate) {
-        onProfileUpdate();
-      }
-      
       setTimeout(() => setShowSuccessMessage(false), 3000);
     },
     onError: (error: any) => {
@@ -125,20 +124,34 @@ export function Profile({
     }
   });
 
-  // Save mutation
-  const saveMutation = useMutation({
+  // Save Delivery Mutation
+  const saveDeliveryMutation = useMutation({
     mutationFn: user.saveDeliverySettings,
     onSuccess: () => {
-      setSuccessMessage('Settings saved successfully!');
+      setSuccessMessage('Delivery information saved');
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
     },
     onError: (error: any) => {
-      setErrorMessage(error.response?.data?.message || 'Failed to save settings');
+      setErrorMessage(error.response?.data?.message || 'Failed to save delivery settings');
       setShowErrorMessage(true);
       setTimeout(() => setShowErrorMessage(false), 3000);
     }
   });
+  
+  if (!userPackage) {
+      // If we can't find the package, we can't properly render the profile badge/styles
+      // We can fallback to a generic loading or error
+      if (!packagesData) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-purple-600" /></div>;
+      
+      // If loaded but not found, maybe show a simplified profile without package specific styling?
+      // Or just a placeholder. For now, let's render a basic placeholder.
+      return (
+         <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <p className="text-gray-500">Loading profile data...</p>
+         </div>
+      );
+  }
 
   const handleUpdateProfile = () => {
     updateProfileMutation.mutate(profileData);
@@ -164,7 +177,7 @@ export function Profile({
       })
     };
 
-    saveMutation.mutate(payload);
+    saveDeliveryMutation.mutate(payload);
   };
 
   return (
@@ -394,10 +407,10 @@ export function Profile({
           </div>
 
           <div className="mt-6">
-            <GradientButton onClick={handleSaveDelivery} disabled={saveMutation.isPending}>
+            <GradientButton onClick={handleSaveDelivery} disabled={saveDeliveryMutation.isPending}>
               <span className="flex items-center gap-2">
-                {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saveMutation.isPending ? 'Saving...' : 'Save Delivery Info'}
+                {saveDeliveryMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saveDeliveryMutation.isPending ? 'Saving...' : 'Save Delivery Info'}
               </span>
             </GradientButton>
           </div>

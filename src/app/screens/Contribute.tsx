@@ -4,8 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { PaystackModal } from '../components/PaystackModal';
-import { user } from '../../lib/api';
-import { packages } from '../data/packages';
+import { user, auth } from '../../lib/api';
 
 interface ContributeProps {
   onBack: () => void;
@@ -37,9 +36,43 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
   const stats = dashboardStatsData?.data || {};
   const currentYear = new Date().getFullYear();
 
-  // Get package pricing
-  const selectedPkg = packages.find(p => p.name === userPackage) || packages[0];
-  const monthlyAmount = selectedPkg.monthlyAmount;
+  // Fetch Packages for dynamic pricing
+  const { data: packagesData, isLoading: isPackagesLoading } = useQuery({
+    queryKey: ['packages'],
+    queryFn: auth.getPackages,
+  });
+
+  const backendList = packagesData?.data?.packages 
+    ? (Array.isArray(packagesData.data.packages) ? packagesData.data.packages : [])
+    : [];
+    
+  // Note: we just need pricing, so merging isn't strictly necessary but good for consistency
+  // However, importing mergeBackendPackages creates a dep. Let's just find the package in raw list or assume backend list is fine.
+  // Actually, let's use the raw backend list to get monthly_contribution
+  
+  const foundPkg = backendList.find((p: any) => p.name === userPackage);
+  
+  if (isPackagesLoading) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        </div>
+      );
+  }
+
+  // If not found and not loading, show error (no fallback!)
+  if (!foundPkg) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+            <div className="text-center">
+                <p className="text-gray-600 mb-2">Could not find package info for "{userPackage}"</p>
+                <button onClick={onBack} className="text-purple-600 font-semibold">Go Back</button>
+            </div>
+        </div>
+      );
+  }
+
+  const monthlyAmount = Number(foundPkg.monthly_contribution);
   const totalAmount = monthlyAmount * userQuantity;
   
   // Use backend data for payment description

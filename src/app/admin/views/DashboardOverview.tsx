@@ -1,6 +1,6 @@
 import { TrendingUp, Users, DollarSign, Package, CheckCircle, Bell, Loader } from 'lucide-react';
 import { Card } from '../../components/Card';
-import { packages } from '../../data/packages';
+
 
 import { admin } from '../../../lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -60,10 +60,27 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   }).sort((a: any, b: any) => b.count - a.count);
 
   const packageSummaries = rawPackages.map((pkg: any) => {
-     // Find matching frontend definition
-    const frontendPkg = packages.find(p => p.id === pkg.name.toLowerCase().replace(' ', '-')) 
-                     || packages.find(p => p.name === pkg.name)
-                     || packages[0];
+     // Use helper (or similar logic) to resolve styles. 
+     // Since mergeBackendPackages expects an array, let's wrap this single package or just duplicate the style selection logic lightly here.
+     // Actually, rawPackages IS what backend returns.
+     // We can just find the merged version.
+     
+     // 1. Get deterministic style
+     // Use efficient hash-like index or simple package ID
+     const PACKAGE_STYLES = [
+        { gradient: 'from-purple-500 to-indigo-500', shadowColor: 'shadow-purple-500/30' },
+        { gradient: 'from-emerald-500 to-teal-500', shadowColor: 'shadow-emerald-500/30' },
+        { gradient: 'from-amber-500 to-orange-500', shadowColor: 'shadow-amber-500/30' },
+        { gradient: 'from-blue-500 to-cyan-500', shadowColor: 'shadow-blue-500/30' }
+     ];
+     // Use random-ish but deterministic index based on name length or something if ID is not numeric
+     const styleIndex = pkg.name.length % PACKAGE_STYLES.length;
+     const style = PACKAGE_STYLES[styleIndex];
+    
+     const frontendPkg = {
+        gradient: style.gradient,
+        shadowColor: style.shadowColor
+     };
     
     return {
       package: { ...frontendPkg, ...pkg }, 

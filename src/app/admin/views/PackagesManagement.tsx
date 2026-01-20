@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Edit, Plus, Eye, Package as PackageIcon, Trash2 } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
-import { packages as initialPackages, Package } from '../../data/packages';
+import { Package } from '../../data/packages';
+import { mergeBackendPackages } from '../../utils/packageUtils';
 import { EditPackageModal } from '../components/EditPackageModal';
 
 import { admin } from '../../../lib/api';
@@ -59,26 +60,8 @@ export function PackagesManagement() {
     ? packagesData.data 
     : (packagesData?.data?.data || []);
 
-  const packages: Package[] = rawPackages.map((p: any) => {
-    // Find matching frontend definition for design assets (gradients, etc)
-    const frontendPkg = initialPackages.find(ip => ip.id === p.name.toLowerCase().replace(' ', '-')) 
-                     || initialPackages.find(ip => ip.name === p.name)
-                     || initialPackages[0];
-
-    return {
-      ...frontendPkg,
-      id: p.id.toString(), // Ensure ID is string if frontend expects string
-      name: p.name,
-      description: p.description,
-      monthlyAmount: Number(p.monthly_contribution),
-      yearlyTotal: Number(p.yearly_contribution),
-      estimatedRetailValue: Number(p.package_worth),
-      savingsPercent: Number(p.savings_percentage),
-      benefits: p.benefits || [],
-      detailedBenefits: [], // If API provides detailed breakdown, map it here
-      badge: p.badge,
-    };
-  });
+  // Use shared utility to consistently merge styles/data
+  const packages: Package[] = mergeBackendPackages(rawPackages);
 
   const handleSavePackage = (updatedPackage: Package) => {
     const payload = {
