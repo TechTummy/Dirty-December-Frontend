@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { X, Plus, Trash2, Save } from 'lucide-react';
 import { Package } from '../../data/packages';
 import { GradientButton } from '../../components/GradientButton';
-import { Card } from '../../components/Card';
 
 interface EditPackageModalProps {
   package?: Package; // Optional for "Add" mode
@@ -16,7 +15,7 @@ export function EditPackageModal({ package: pkg, onClose, onSave }: EditPackageM
   const [formData, setFormData] = useState({
     name: pkg?.name || '',
     monthlyAmount: pkg?.monthlyAmount || 0,
-    estimatedRetailValue: pkg?.estimatedRetailValue || 0,
+    yearlyTotal: pkg?.yearlyTotal || (pkg?.monthlyAmount ? pkg.monthlyAmount * 12 : 0),
     description: pkg?.description || '',
     badge: pkg?.badge || '',
   });
@@ -35,27 +34,15 @@ export function EditPackageModal({ package: pkg, onClose, onSave }: EditPackageM
     setBenefits(benefits.filter((_, i) => i !== index));
   };
 
-  const calculateTotals = () => {
-    const yearlyTotal = formData.monthlyAmount * 12;
-    const savings = formData.estimatedRetailValue - yearlyTotal;
-    const savingsPercent = formData.estimatedRetailValue > 0 
-      ? Math.round((savings / formData.estimatedRetailValue) * 100) 
-      : 0;
-
-    return { yearlyTotal, savings, savingsPercent };
-  };
-
   const handleSave = () => {
-    const totals = calculateTotals();
-    
     const updatedPackage: Package = {
       id: pkg?.id || `pkg-${Date.now()}`,
       name: formData.name,
       monthlyAmount: formData.monthlyAmount,
-      yearlyTotal: totals.yearlyTotal,
-      estimatedRetailValue: formData.estimatedRetailValue,
-      savings: totals.savings,
-      savingsPercent: totals.savingsPercent,
+      yearlyTotal: formData.yearlyTotal,
+      estimatedRetailValue: 0, // No longer used, setting to 0 or could make optional in type if allowed
+      savings: 0,
+      savingsPercent: 0,
       description: formData.description,
       benefits,
       gradient: pkg?.gradient || 'from-indigo-500 via-purple-500 to-pink-500',
@@ -66,8 +53,7 @@ export function EditPackageModal({ package: pkg, onClose, onSave }: EditPackageM
     onSave(updatedPackage);
   };
 
-  const totals = calculateTotals();
-  const isFormValid = formData.name && formData.monthlyAmount > 0 && formData.estimatedRetailValue > 0 && benefits.length > 0;
+  const isFormValid = formData.name && formData.monthlyAmount > 0 && formData.yearlyTotal > 0 && benefits.length > 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -128,7 +114,14 @@ export function EditPackageModal({ package: pkg, onClose, onSave }: EditPackageM
                 <input
                   type="number"
                   value={formData.monthlyAmount || ''}
-                  onChange={(e) => setFormData({ ...formData, monthlyAmount: Number(e.target.value) })}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setFormData({ 
+                      ...formData, 
+                      monthlyAmount: val,
+                      yearlyTotal: val * 12
+                    });
+                  }}
                   placeholder="5000"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
@@ -136,14 +129,15 @@ export function EditPackageModal({ package: pkg, onClose, onSave }: EditPackageM
 
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Estimated Package Worth (₦)
+                  Yearly Total (₦)
                 </label>
                 <input
                   type="number"
-                  value={formData.estimatedRetailValue || ''}
-                  onChange={(e) => setFormData({ ...formData, estimatedRetailValue: Number(e.target.value) })}
-                  placeholder="85700"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  value={formData.yearlyTotal || ''}
+                  readOnly
+                  disabled
+                  placeholder="60000"
+                  className="w-full px-4 py-2.5 bg-slate-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
                 />
               </div>
 
@@ -160,29 +154,6 @@ export function EditPackageModal({ package: pkg, onClose, onSave }: EditPackageM
                 />
               </div>
             </div>
-
-            {/* Calculated Values */}
-            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-              <h3 className="font-bold text-gray-900 mb-3">Auto-Calculated Values</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">Yearly Total</p>
-                  <p className="font-bold text-gray-900">₦{totals.yearlyTotal.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">Package Worth</p>
-                  <p className="font-bold text-emerald-600">₦{formData.estimatedRetailValue.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">Savings</p>
-                  <p className="font-bold text-purple-600">₦{totals.savings.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">Savings %</p>
-                  <p className="font-bold text-amber-600">{totals.savingsPercent}%</p>
-                </div>
-              </div>
-            </Card>
 
             {/* Benefits List */}
             <div>

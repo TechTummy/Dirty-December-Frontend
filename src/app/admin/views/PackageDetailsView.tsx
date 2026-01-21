@@ -23,12 +23,12 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     queryFn: () => admin.getPackageById(packageId),
   });
 
-  const packageData = packageApiResponse?.data;
+  const packageData: any = packageApiResponse?.data;
 
   // Fetch users for this package
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: admin.getUsers,
+    queryFn: () => admin.getUsers(),
   });
 
   // Fetch transactions for this package to calculate totals
@@ -62,8 +62,8 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     ...packageData,
     gradient: packageData.gradient || 'from-indigo-500 via-purple-500 to-pink-500',
     shadowColor: packageData.shadow_color || 'shadow-purple-500/30',
-    monthlyAmount: Number(packageData.price) || packageData.monthlyAmount || 0,
-    yearlyTotal: (Number(packageData.price) || 0) * 12,
+    monthlyAmount: Number(packageData.monthly_contribution) || Number(packageData.price) || packageData.monthlyAmount || 0,
+    yearlyTotal: Number(packageData.yearly_contribution) || (Number(packageData.price) || 0) * 12,
     name: packageData.name,
     description: packageData.description
   };
@@ -101,21 +101,27 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   })).filter((u: any) => u.packageId === packageId);
 
   // Calculate package stats from real data
-  const totalUsers = allUsers.length;
+  const totalUsers = packageData.stats?.total_users ?? allUsers.length;
   const activeUsers = allUsers.filter((u: any) => u.status === 'active').length;
   
   // Use transaction sum if available, otherwise sum from user records
-  const totalContributions = realTotalContributions > 0 
-    ? realTotalContributions 
-    : allUsers.reduce((sum: number, user: any) => sum + user.totalPaid, 0);
+  const totalContributions = packageData.stats?.total_contributions ?? (
+    realTotalContributions > 0 
+      ? realTotalContributions 
+      : allUsers.reduce((sum: number, user: any) => sum + user.totalPaid, 0)
+  );
   
-  const expectedTotal = allUsers.length * displayPackage.yearlyTotal; 
+  const expectedTotal = packageData.stats?.expected_total ?? (allUsers.length * displayPackage.yearlyTotal); 
   
-  const avgMonthsContributed = totalUsers > 0 
-    ? allUsers.reduce((sum: number, user: any) => sum + user.contributions, 0) / totalUsers 
-    : 0;
+  const avgMonthsContributed = packageData.stats?.avg_months_paid ?? (
+    totalUsers > 0 
+      ? allUsers.reduce((sum: number, user: any) => sum + user.contributions, 0) / totalUsers 
+      : 0
+  );
     
-  const completionRate = expectedTotal > 0 ? (totalContributions / expectedTotal) * 100 : 0;
+  const completionRate = packageData.stats?.progress_percentage ?? (
+    expectedTotal > 0 ? (totalContributions / expectedTotal) * 100 : 0
+  );
 
   // Filter logic
   const filteredUsers = allUsers.filter((user: any) => {
@@ -193,9 +199,8 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
               <DollarSign className="w-6 h-6 text-white" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{(totalContributions / 1000000).toFixed(1)}M</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{totalContributions.toLocaleString()}</h3>
           <p className="text-sm text-gray-500">Total Contributions</p>
-          <p className="text-xs text-gray-600 mt-1">₦{totalContributions.toLocaleString()}</p>
         </Card>
 
         <Card className="border-0 shadow-lg">
@@ -204,7 +209,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{(expectedTotal / 1000000).toFixed(1)}M</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">₦{expectedTotal.toLocaleString()}</h3>
           <p className="text-sm text-gray-500">Expected Total</p>
           <p className="text-xs text-gray-600 mt-1">At year completion</p>
         </Card>

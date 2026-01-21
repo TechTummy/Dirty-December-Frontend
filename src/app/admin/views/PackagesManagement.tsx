@@ -69,8 +69,6 @@ export function PackagesManagement() {
       description: updatedPackage.description,
       monthly_contribution: updatedPackage.monthlyAmount,
       yearly_contribution: updatedPackage.yearlyTotal,
-      package_worth: updatedPackage.estimatedRetailValue,
-      savings_percentage: updatedPackage.savingsPercent,
       benefits: updatedPackage.benefits,
       badge: updatedPackage.badge,
       // Default to active for now
