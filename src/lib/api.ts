@@ -24,6 +24,27 @@ export interface DashboardData {
     status: 'active' | 'inactive' | 'reserved';
 }
 
+export interface PackageStats {
+    total_users: number;
+    total_contributions: number;
+    expected_total: number;
+    avg_months_paid: number;
+    progress_percentage: number;
+}
+
+export interface Package {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    monthly_contribution?: number;
+    yearly_contribution?: number;
+    gradient?: string;
+    shadow_color?: string;
+    stats?: PackageStats;
+    // Add other fields as they are discovered
+}
+
 // Create a standard axios instance given the base URL.
 export const api = axios.create({
     baseURL: '/',

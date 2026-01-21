@@ -20,6 +20,11 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
     queryFn: admin.getDashboardStats,
   });
 
+  const { data: packagesData, isLoading: isLoadingPackages } = useQuery({
+    queryKey: ['adminPackages'],
+    queryFn: admin.getPackages,
+  });
+
   const reminderMutation = useMutation({
     mutationFn: admin.triggerReminders,
     onSuccess: () => {
@@ -33,10 +38,11 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   const stats = statsData?.data || {};
   const recentContributions = stats.recent_contributions || [];
   
-  // Package summary data with contributions
-  const rawPackages = stats.packages || [];
+  // Use packages from the packages endpoint as it contains the stats
+  const rawPackages = packagesData?.data || [];
   
-  // Transform user counts array to map for easier lookup
+  // Transform user counts array from dashboard stats if needed, 
+  // but preferably use stats.total_users from package data if available
   const userCountsMap = (stats.user_counts_per_package || []).reduce((acc: any, item: any) => {
     if (item.package?.name) {
       acc[item.package.name] = item.count;
@@ -45,11 +51,12 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   }, {});
 
   // Calculate distribution
-  const totalUsers = Object.values(userCountsMap).reduce((a: any, b: any) => a + b, 0) as number;
+  // We can use the total_users from stats if available, otherwise fall back to map
+  const totalUsers = rawPackages.reduce((sum: number, pkg: any) => sum + (pkg.stats?.total_users || userCountsMap[pkg.name] || 0), 0);
   
   const packageDistribution = rawPackages.map((pkg: any, index: number) => {
     const colors = ['bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-blue-500', 'bg-rose-500', 'bg-cyan-500'];
-    const count = userCountsMap[pkg.name] || 0;
+    const count = pkg.stats?.total_users ?? (userCountsMap[pkg.name] || 0);
     
     return {
       name: pkg.name,
@@ -84,13 +91,15 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
     
     return {
       package: { ...frontendPkg, ...pkg }, 
-      users: userCountsMap[pkg.name] || 0,
-      totalContributions: pkg.total_contribution || 0, // Note: API might verify key name (singular/plural)
-      avgMonthsContributed: pkg.avg_months || 0
+      users: pkg.stats?.total_users ?? (userCountsMap[pkg.name] || 0),
+      totalContributions: pkg.stats?.total_contributions ?? (pkg.total_contribution || 0),
+      expectedTotal: pkg.stats?.expected_total ?? ((pkg.stats?.total_users ?? (userCountsMap[pkg.name] || 0)) * (Number(pkg.yearly_contribution) || Number(pkg.yearlyTotal) || 0)),
+      avgMonthsContributed: pkg.stats?.avg_months_paid ?? (pkg.avg_months || 0),
+      progress: pkg.stats?.progress_percentage ?? 0
     };
   });
 
-  if (isLoading) {
+  if (isLoading || isLoadingPackages) {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -164,8 +173,7 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
                 <div className="flex items-center justify-between p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
                   <div>
                     <p className="text-xs text-emerald-700 mb-1 font-medium">Total Contributions</p>
-                    <p className="text-2xl font-bold text-emerald-700">₦{(Number(summary.totalContributions) / 1000000).toFixed(1)}M</p>
-                    <p className="text-xs text-emerald-600 mt-1">₦{Number(summary.totalContributions).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-emerald-700">₦{Number(summary.totalContributions).toLocaleString()}</p>
                   </div>
                   <DollarSign className="w-8 h-8 text-emerald-500" />
                 </div>
@@ -173,11 +181,11 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-purple-50 rounded-xl">
                     <p className="text-xs text-gray-600 mb-1">Avg. Months</p>
-                    <p className="font-bold text-gray-900">{summary.avgMonthsContributed}/12</p>
+                    <p className="font-bold text-gray-900">{Number(summary.avgMonthsContributed).toFixed(1)}/12</p>
                   </div>
                   <div className="p-3 bg-amber-50 rounded-xl">
                     <p className="text-xs text-gray-600 mb-1">Progress</p>
-                    <p className="font-bold text-gray-900">{Math.round((summary.avgMonthsContributed / 12) * 100)}%</p>
+                    <p className="font-bold text-gray-900">{Math.round(summary.progress)}%</p>
                   </div>
                 </div>
 
@@ -185,7 +193,7 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
                 <div className="pt-3 border-t border-gray-100">
                   <div className="flex items-center justify-between text-xs text-gray-600">
                     <span>Expected at completion:</span>
-                    <span className="font-bold text-gray-900">₦{((summary.users * Number(summary.package.yearly_contribution || summary.package.yearlyTotal)) / 1000000).toFixed(1)}M</span>
+                    <span className="font-bold text-gray-900">₦{Number(summary.expectedTotal).toLocaleString()}</span>
                   </div>
                 </div>
               </div>

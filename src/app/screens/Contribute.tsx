@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowLeft, CheckCircle, CreditCard, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { GradientButton } from '../components/GradientButton';
@@ -8,35 +8,25 @@ import { user, auth } from '../../lib/api';
 
 interface ContributeProps {
   onBack: () => void;
+  // Props can remain for overrides if needed, but we prioritize backend data
   userPackage?: string;
   userQuantity?: number;
   userEmail?: string;
 }
 
-export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity = 1, userEmail = 'user@email.com' }: ContributeProps) {
+export function Contribute({ onBack, userEmail = 'user@email.com' }: ContributeProps) {
   const [showPaystackModal, setShowPaystackModal] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
-  // Get current status to determine month
-  const { data: transactionsData } = useQuery({
-    queryKey: ['transactions'],
-    queryFn: user.getTransactions,
-  });
-
-  const rawHistory = transactionsData?.data?.data || transactionsData?.data || [];
-  const contributionHistory = Array.isArray(rawHistory) ? rawHistory : [];
-  const confirmedContributions = contributionHistory.filter((c: any) => c.status === 'confirmed' || c.status === 'success').length;
-  
-  // Fetch Dashboard Stats for accurate next payment data
-  const { data: dashboardStatsData } = useQuery({
+  // Fetch Dashboard Stats for current package and payment info
+  const { data: dashboardStatsData, isLoading: isDashboardLoading } = useQuery({
     queryKey: ['dashboard_stats'],
     queryFn: user.getDashboard,
   });
-  
-  const stats = dashboardStatsData?.data || {};
-  const currentYear = new Date().getFullYear();
 
-  // Fetch Packages for dynamic pricing
+  const stats = dashboardStatsData?.data || {};
+  
+  // Fetch Packages for details (benefits, monthly contribution to calc quantity)
   const { data: packagesData, isLoading: isPackagesLoading } = useQuery({
     queryKey: ['packages'],
     queryFn: auth.getPackages,
@@ -45,14 +35,38 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
   const backendList = packagesData?.data?.packages 
     ? (Array.isArray(packagesData.data.packages) ? packagesData.data.packages : [])
     : [];
+
+  // Determine Package and Quantity dynamically
+  const { foundPkg, quantity, monthlyAmount, totalAmount } = useMemo(() => {
+    if (!stats.package_name || !backendList.length) {
+      return { foundPkg: null, quantity: 1, monthlyAmount: 0, totalAmount: 0 };
+    }
+
+    const pkg = backendList.find((p: any) => p.name === stats.package_name);
     
-  // Note: we just need pricing, so merging isn't strictly necessary but good for consistency
-  // However, importing mergeBackendPackages creates a dep. Let's just find the package in raw list or assume backend list is fine.
-  // Actually, let's use the raw backend list to get monthly_contribution
-  
-  const foundPkg = backendList.find((p: any) => p.name === userPackage);
-  
-  if (isPackagesLoading) {
+    if (!pkg) {
+      return { foundPkg: null, quantity: 1, monthlyAmount: 0, totalAmount: 0 };
+    }
+
+    const monthlyFn = Number(pkg.monthly_contribution);
+    const nextAmount = Number(stats.next_payment_amount);
+    
+    // Calculate quantity based on next payment amount from backend
+    // If nextAmount is valid and compatible with monthly, use it. Otherwise default to 1 slot.
+    const calculatedQty = (monthlyFn > 0 && nextAmount > 0) 
+      ? Math.round(nextAmount / monthlyFn) 
+      : 1;
+
+    return { 
+      foundPkg: pkg, 
+      quantity: calculatedQty,
+      monthlyAmount: monthlyFn,
+      totalAmount: nextAmount > 0 ? nextAmount : monthlyFn 
+    };
+  }, [stats.package_name, stats.next_payment_amount, backendList]);
+
+  // Combined loading state
+  if (isDashboardLoading || isPackagesLoading) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
@@ -60,24 +74,26 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
       );
   }
 
-  // If not found and not loading, show error (no fallback!)
+  // If we loaded data but couldn't identify the package from the backend response
   if (!foundPkg) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
             <div className="text-center">
-                <p className="text-gray-600 mb-2">Could not find package info for "{userPackage}"</p>
-                <button onClick={onBack} className="text-purple-600 font-semibold">Go Back</button>
+                <p className="text-gray-600 mb-2">
+                  Could not identify your active package. Please contact support or try again.
+                </p>
+                <div className="text-xs text-gray-500 mb-4">
+                  {stats.package_name ? `Target: ${stats.package_name}` : 'No active package found'}
+                </div>
+                <button onClick={onBack} className="text-purple-600 font-semibold hover:underline">Go Back</button>
             </div>
         </div>
       );
   }
-
-  const monthlyAmount = Number(foundPkg.monthly_contribution);
-  const totalAmount = monthlyAmount * userQuantity;
   
   // Use backend data for payment description
   const nextPaymentLabel = stats.next_payment_date 
-      ? stats.next_payment_date // e.g. "April 2026"
+      ? stats.next_payment_date // e.g. "February 2026"
       : 'Contribution Payment'; 
 
   const handlePaymentSuccess = () => {
@@ -111,13 +127,13 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
             {/* Package Info */}
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
               <p className="text-sm text-gray-600">Package</p>
-              <p className="font-semibold text-gray-900">{userPackage}</p>
+              <p className="font-semibold text-gray-900">{foundPkg.name}</p>
             </div>
             
             {/* Slot Breakdown */}
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
               <p className="text-sm text-gray-600">Number of Slots</p>
-              <p className="font-semibold text-gray-900">{userQuantity} {userQuantity === 1 ? 'slot' : 'slots'}</p>
+              <p className="font-semibold text-gray-900">{quantity} {quantity === 1 ? 'slot' : 'slots'}</p>
             </div>
             
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
@@ -126,10 +142,10 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
             </div>
             
             {/* Calculation */}
-            {userQuantity > 1 && (
+            {quantity > 1 && (
               <div className="flex items-center justify-between py-3 border-b border-gray-100">
                 <p className="text-sm text-gray-600">Calculation</p>
-                <p className="text-sm text-gray-600">{userQuantity} × ₦{monthlyAmount.toLocaleString()}</p>
+                <p className="text-sm text-gray-600">{quantity} × ₦{monthlyAmount.toLocaleString()}</p>
               </div>
             )}
             
@@ -247,8 +263,8 @@ export function Contribute({ onBack, userPackage = 'Basic Bundle', userQuantity 
         <PaystackModal
           amount={totalAmount}
           email={userEmail}
-          packageName={userPackage}
-          quantity={userQuantity}
+          packageName={foundPkg.name}
+          quantity={quantity}
           onSuccess={handlePaymentSuccess}
           onClose={() => setShowPaystackModal(false)}
         />
