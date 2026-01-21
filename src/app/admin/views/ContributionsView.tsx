@@ -17,6 +17,8 @@ interface Contribution {
   userEmail: string;
   userPhone: string;
   month: string;
+  paymentMonth: number | null;
+  paymentYear: string | number | null;
   amount: number;
   quantity: number; // Number of slots
   status: 'pending' | 'confirmed' | 'declined';
@@ -28,6 +30,12 @@ interface Contribution {
   proofUrl: string;
 }
 
+const getMonthName = (month: number) => {
+  const date = new Date();
+  date.setMonth(month - 1);
+  return date.toLocaleString('default', { month: 'long' });
+};
+
 export function ContributionsView({ packageId, onBack }: ContributionsViewProps) {
   const [activeTab, setActiveTab] = useState<'contributions' | 'delivery'>('contributions');
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,13 +43,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const [filterMonth, setFilterMonth] = useState('all');
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [showProofPreview, setShowProofPreview] = useState(false);
-  /* 
-    API Integration:
-    - Use useQuery to fetch transactions via admin.getTransactions
-    - Map the API response to the Contribution interface
-    - Filter by packageId if the API returns all transactions
-  */
   
+  // ... (keeping existing query hooks) ...
   // Fetch Transactions (Contributions)
   const { data: transactionsData, isLoading: isLoadingTransactions, refetch: refetchContributions } = useQuery({
     queryKey: ['admin-transactions', packageId],
@@ -94,6 +97,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     userPhone: t.user?.phone || 'No Phone',
     // Derive month from created_at since it's not in the response directly
     month: t.created_at ? new Date(t.created_at).toLocaleString('default', { month: 'long' }) : 'Unknown',
+    paymentMonth: t.payment_month,
+    paymentYear: t.payment_year,
     amount: Number(t.amount) || 0,
     quantity: Number(t.user?.slots || t.slots || 1), 
     status: t.status === 'approved' ? 'confirmed' : (t.status || 'pending'),
@@ -113,6 +118,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     userEmail: t.user?.email || 'No Email',
     userPhone: t.user?.phone || 'No Phone',
     month: 'Delivery',
+    paymentMonth: null,
+    paymentYear: null,
     amount: Number(t.amount) || 0,
     quantity: 1,
     status: t.status === 'approved' ? 'confirmed' : (t.status || 'pending'),
@@ -214,7 +221,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
 
   const handleExport = () => {
     // Create CSV header
-    const headers = ['Transaction ID', 'User Name', 'Email', 'Phone', 'Month', 'Slots', 'Amount', 'Payment Method', 'Reference', 'Status', 'Date', 'Time'];
+    const headers = ['Transaction ID', 'User Name', 'Email', 'Phone', 'Month', 'Paid For', 'Slots', 'Amount', 'Payment Method', 'Reference', 'Status', 'Date', 'Time'];
     
     // Create CSV rows from filtered data
     const rows = filteredContributions.map(c => [
@@ -223,6 +230,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       c.userEmail,
       c.userPhone,
       c.month,
+      c.paymentMonth ? `${getMonthName(c.paymentMonth)} ${c.paymentYear || ''}` : '',
       c.quantity.toString(),
       c.amount.toString(),
       c.paymentMethod,
@@ -427,7 +435,12 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
               <div className="space-y-2 text-xs mb-3">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Month:</span>
-                  <span className="text-gray-900 font-medium">{contribution.month}</span>
+                  <div className="text-right">
+                    <span className="text-gray-900 font-medium">{contribution.month}</span>
+                    {contribution.paymentMonth && (
+                      <p className="text-xs text-gray-500">Paid for: {getMonthName(contribution.paymentMonth)} {contribution.paymentYear}</p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Slots:</span>
@@ -516,6 +529,11 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                       <>
                         <td className="py-4 px-4">
                             <p className="font-medium text-gray-700">{contribution.month}</p>
+                            {contribution.paymentMonth && (
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Paid for: <span className="font-medium">{getMonthName(contribution.paymentMonth)}</span> <span className="text-gray-400">{contribution.paymentYear}</span>
+                                </p>
+                            )}
                         </td>
                         <td className="py-4 px-4">
                             <div className="flex items-center gap-1.5">

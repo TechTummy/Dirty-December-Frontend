@@ -11,27 +11,65 @@ interface VideoTestimonial {
 }
 
 // Placeholder video testimonials - replace with actual video URLs
+// Main featured video
+const mainVideo = {
+  id: 0,
+  name: "Welcome",
+  location: "Experience the Joy",
+  videoUrl: "/videos/main.mp4",
+  thumbnail: "" // Browser will generate thumbnail from first frame
+};
+
+// Carousel videos
 const videoTestimonials: VideoTestimonial[] = [
   {
     id: 1,
-    name: "Amaka Okonkwo",
-    location: "Lagos",
-    videoUrl: "https://example.com/video1.mp4", // Replace with actual video URL
-    thumbnail: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=300&h=500&fit=crop"
+    name: "",
+    location: "",
+    videoUrl: "/videos/video2.mp4",
+    thumbnail: ""
   },
   {
     id: 2,
-    name: "Chidi Nwosu",
-    location: "Abuja",
-    videoUrl: "https://example.com/video2.mp4", // Replace with actual video URL
-    thumbnail: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=500&fit=crop"
+    name: "",
+    location: "",
+    videoUrl: "/videos/video3.mp4",
+    thumbnail: ""
   },
   {
     id: 3,
-    name: "Blessing Adeyemi",
-    location: "Ibadan",
-    videoUrl: "https://example.com/video3.mp4", // Replace with actual video URL
-    thumbnail: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=500&fit=crop"
+    name: "",
+    location: "",
+    videoUrl: "/videos/video4.mp4",
+    thumbnail: ""
+  },
+  {
+    id: 4,
+    name: "",
+    location: "",
+    videoUrl: "/videos/video5.mp4",
+    thumbnail: ""
+  },
+  {
+    id: 5,
+    name: "",
+    location: "",
+    videoUrl: "/videos/video6.mp4",
+    thumbnail: ""
+  },
+  {
+    id: 6,
+    name: "",
+    location: "",
+    videoUrl: "/videos/video7.mp4",
+    thumbnail: ""
+  },
+  {
+    id: 7,
+    name: "",
+    location: "",
+    videoUrl: "/videos/vidoe8.mp4", // Note: keeping typo as per filename
+    thumbnail: ""
   }
 ];
 
@@ -43,7 +81,7 @@ export function VideoTestimonials() {
 
   const settings = {
     dots: false,
-    infinite: true,
+    infinite: false,
     speed: 500,
     slidesToShow: 1,
     slidesToScroll: 1,
@@ -58,7 +96,10 @@ export function VideoTestimonials() {
           video.pause();
         }
       });
-      setPlayingVideo(null);
+      // Don't reset playingVideo if it's the main video (id 0)
+      if (playingVideo !== 0) {
+        setPlayingVideo(null);
+      }
     },
     responsive: [
       {
@@ -71,6 +112,12 @@ export function VideoTestimonials() {
   };
 
   const handlePlayVideo = (id: number) => {
+    // Pause any currently playing video first
+    if (playingVideo !== null && playingVideo !== id) {
+      const currentVideo = videoRefs.current[playingVideo];
+      if (currentVideo) currentVideo.pause();
+    }
+
     const video = videoRefs.current[id];
     if (video) {
       setPlayingVideo(id); // Set state immediately for UI feedback
@@ -104,11 +151,92 @@ export function VideoTestimonials() {
     });
   };
 
+  const renderVideoCard = (videoData: VideoTestimonial, isFeatured = false) => (
+    <div className={`relative mx-auto ${isFeatured ? 'w-full max-w-2xl px-4 mb-12' : ''}`} style={{ maxWidth: isFeatured ? 'none' : '280px' }}>
+      {/* Container - aspect ratio adapts based on featured status */}
+      <div className={`relative ${isFeatured ? 'aspect-[3/4] md:aspect-[4/3]' : 'aspect-[9/16]'} rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-4 border-white/20`}>
+        
+        {/* Video Element */}
+        <video
+          ref={(el) => { videoRefs.current[videoData.id] = el; }}
+          className="w-full h-full object-cover"
+          playsInline
+          muted={muted}
+          // Remove poster to show first frame naturally
+          onEnded={() => setPlayingVideo(null)}
+          onClick={() => {
+            if (playingVideo === videoData.id) {
+              handlePauseVideo(videoData.id);
+            } else {
+              handlePlayVideo(videoData.id);
+            }
+          }}
+        >
+          <source src={videoData.videoUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        
+        {/* Play/Pause Button Overlay - Only show when not playing */}
+        {playingVideo !== videoData.id && (
+          <div 
+            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer group"
+            onClick={() => handlePlayVideo(videoData.id)}
+          >
+            <div className={`rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform ${isFeatured ? 'w-20 h-20' : 'w-16 h-16'}`}>
+              <Play className={`${isFeatured ? 'w-10 h-10' : 'w-8 h-8'} text-purple-600 ml-1`} fill="currentColor" />
+            </div>
+          </div>
+        )}
+
+        {/* Video Controls - Show when playing */}
+        {playingVideo === videoData.id && (
+          <div className="absolute top-4 right-4 z-10 flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleMute();
+              }}
+              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center hover:bg-black/70 transition-colors"
+            >
+              {muted ? (
+                <VolumeX className="w-5 h-5 text-white" />
+              ) : (
+                <Volume2 className="w-5 h-5 text-white" />
+              )}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePauseVideo(videoData.id);
+              }}
+              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center hover:bg-black/70 transition-colors"
+            >
+              <Pause className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        )}
+
+        {/* Gradient Overlay at Bottom */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pointer-events-none">
+          <p className={`${isFeatured ? 'text-2xl' : ''} text-white font-bold mb-1`}>{videoData.name}</p>
+          <p className="text-white/80 text-sm">{videoData.location}</p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="mb-8">
-      <div className="text-center mb-4">
-        <h2 className="font-bold text-gray-900 mb-1">Putting Smiles on Faces</h2>
-        <p className="text-sm text-gray-600">See how we've blessed friends and family in past years</p>
+      <div className="text-center mb-8">
+        <h2 className="font-bold text-gray-900 mb-1 text-3xl">Our Stories</h2>
+        <p className="text-gray-600 text-lg">See the joy we bring to our community</p>
+      </div>
+
+      {/* Featured Video */}
+      {renderVideoCard(mainVideo, true)}
+
+      <div className="text-center mb-6">
+        <h3 className="font-bold text-gray-900 text-xl">More Testimonials</h3>
       </div>
 
       {/* Video Carousel */}
@@ -116,85 +244,11 @@ export function VideoTestimonials() {
         <Slider ref={sliderRef} {...settings}>
           {videoTestimonials.map((testimonial) => (
             <div key={testimonial.id} className="px-2">
-              <div className="relative mx-auto" style={{ maxWidth: '280px' }}>
-                {/* Portrait Video Container */}
-                <div className="relative aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900">
-                  
-                  {/* Video Element */}
-                  <video
-                    ref={(el) => { videoRefs.current[testimonial.id] = el; }}
-                    className="w-full h-full object-cover"
-                    poster={testimonial.thumbnail}
-                    playsInline
-                    muted={muted}
-                    onEnded={() => setPlayingVideo(null)}
-                    onClick={() => {
-                      if (playingVideo === testimonial.id) {
-                        handlePauseVideo(testimonial.id);
-                      } else {
-                        handlePlayVideo(testimonial.id);
-                      }
-                    }}
-                  >
-                    <source src={testimonial.videoUrl} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                  
-                  {/* Play/Pause Button Overlay - Only show when not playing */}
-                  {playingVideo !== testimonial.id && (
-                    <div 
-                      className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer"
-                      onClick={() => handlePlayVideo(testimonial.id)}
-                    >
-                      <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl hover:scale-110 transition-transform">
-                        <Play className="w-8 h-8 text-purple-600 ml-1" fill="currentColor" />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Video Controls - Show when playing */}
-                  {playingVideo === testimonial.id && (
-                    <div className="absolute top-4 right-4 z-10 flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleMute();
-                        }}
-                        className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center hover:bg-black/70 transition-colors"
-                      >
-                        {muted ? (
-                          <VolumeX className="w-5 h-5 text-white" />
-                        ) : (
-                          <Volume2 className="w-5 h-5 text-white" />
-                        )}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePauseVideo(testimonial.id);
-                        }}
-                        className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center hover:bg-black/70 transition-colors"
-                      >
-                        <Pause className="w-5 h-5 text-white" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Gradient Overlay at Bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pointer-events-none">
-                    <p className="text-white font-bold mb-1">{testimonial.name}</p>
-                    <p className="text-white/80 text-sm">{testimonial.location}</p>
-                  </div>
-
-                  {/* Decorative Border */}
-                  <div className="absolute inset-0 rounded-2xl border-2 border-white/10 pointer-events-none"></div>
-                </div>
-              </div>
+              {renderVideoCard(testimonial)}
             </div>
           ))}
         </Slider>
-      </div>
-
+      </div>                  
       {/* Navigation Arrows */}
       <div className="flex items-center justify-center gap-4 mt-6">
         <button
