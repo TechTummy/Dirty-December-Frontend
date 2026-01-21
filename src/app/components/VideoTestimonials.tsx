@@ -12,64 +12,63 @@ interface VideoTestimonial {
 
 // Placeholder video testimonials - replace with actual video URLs
 // Main featured video
-const mainVideo = {
-  id: 0,
-  name: "Welcome",
-  location: "Experience the Joy",
-  videoUrl: "/videos/main.mp4",
-  thumbnail: "" // Browser will generate thumbnail from first frame
-};
-
 // Carousel videos
 const videoTestimonials: VideoTestimonial[] = [
+  {
+    id: 0,
+    name: "Welcome",
+    location: "Experience the Joy",
+    videoUrl: "/videos/main.mp4",
+    thumbnail: "/images/main_thumb.png" // Browser will generate thumbnail from first frame
+  },
   {
     id: 1,
     name: "",
     location: "",
     videoUrl: "/videos/video2.mp4",
-    thumbnail: ""
+    thumbnail: "/images/video2_thumb.png"
   },
   {
     id: 2,
     name: "",
     location: "",
     videoUrl: "/videos/video3.mp4",
-    thumbnail: ""
+    thumbnail: "/images/video3_thumb.png"
   },
   {
     id: 3,
     name: "",
     location: "",
     videoUrl: "/videos/video4.mp4",
-    thumbnail: ""
+    thumbnail: "/images/video4_thumb.png"
   },
   {
     id: 4,
     name: "",
     location: "",
     videoUrl: "/videos/video5.mp4",
-    thumbnail: ""
+    thumbnail: "/images/video5_thumb.png"
   },
   {
     id: 5,
     name: "",
     location: "",
     videoUrl: "/videos/video6.mp4",
-    thumbnail: ""
+    thumbnail: "/images/video6_thumb.png"
   },
   {
     id: 6,
     name: "",
     location: "",
     videoUrl: "/videos/video7.mp4",
-    thumbnail: ""
+    thumbnail: "/images/video7_thumb.png"
   },
   {
     id: 7,
     name: "",
     location: "",
     videoUrl: "/videos/vidoe8.mp4", // Note: keeping typo as per filename
-    thumbnail: ""
+    thumbnail: "/images/video8_thumb.png"
   }
 ];
 
@@ -77,6 +76,7 @@ export function VideoTestimonials() {
   const sliderRef = useRef<Slider>(null);
   const [playingVideo, setPlayingVideo] = useState<number | null>(null);
   const [muted, setMuted] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
 
   const settings = {
@@ -89,17 +89,15 @@ export function VideoTestimonials() {
     arrows: false,
     centerMode: true,
     centerPadding: '40px',
-    beforeChange: () => {
+    beforeChange: (_: number, next: number) => {
       // Pause all videos when changing slides
       Object.values(videoRefs.current).forEach(video => {
         if (video) {
           video.pause();
         }
       });
-      // Don't reset playingVideo if it's the main video (id 0)
-      if (playingVideo !== 0) {
-        setPlayingVideo(null);
-      }
+      setPlayingVideo(null);
+      setCurrentSlide(next);
     },
     responsive: [
       {
@@ -151,18 +149,18 @@ export function VideoTestimonials() {
     });
   };
 
-  const renderVideoCard = (videoData: VideoTestimonial, isFeatured = false) => (
-    <div className={`relative mx-auto ${isFeatured ? 'w-full max-w-2xl px-4 mb-12' : ''}`} style={{ maxWidth: isFeatured ? 'none' : '280px' }}>
-      {/* Container - aspect ratio adapts based on featured status */}
-      <div className={`relative ${isFeatured ? 'aspect-[3/4] md:aspect-[4/3]' : 'aspect-[9/16]'} rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-4 border-white/20`}>
+  const renderVideoCard = (videoData: VideoTestimonial) => (
+    <div className="relative mx-auto" style={{ maxWidth: '280px' }}>
+      {/* Container - using a consistent aspect ratio for all carousel items */}
+      <div className="relative aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-4 border-white/20">
         
         {/* Video Element */}
         <video
           ref={(el) => { videoRefs.current[videoData.id] = el; }}
           className="w-full h-full object-cover"
+          poster={videoData.thumbnail}
           playsInline
           muted={muted}
-          // Remove poster to show first frame naturally
           onEnded={() => setPlayingVideo(null)}
           onClick={() => {
             if (playingVideo === videoData.id) {
@@ -182,8 +180,8 @@ export function VideoTestimonials() {
             className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer group"
             onClick={() => handlePlayVideo(videoData.id)}
           >
-            <div className={`rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform ${isFeatured ? 'w-20 h-20' : 'w-16 h-16'}`}>
-              <Play className={`${isFeatured ? 'w-10 h-10' : 'w-8 h-8'} text-purple-600 ml-1`} fill="currentColor" />
+            <div className="w-16 h-16 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+              <Play className="w-8 h-8 text-purple-600 ml-1" fill="currentColor" />
             </div>
           </div>
         )}
@@ -218,7 +216,7 @@ export function VideoTestimonials() {
 
         {/* Gradient Overlay at Bottom */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pointer-events-none">
-          <p className={`${isFeatured ? 'text-2xl' : ''} text-white font-bold mb-1`}>{videoData.name}</p>
+          <p className="text-xl text-white font-bold mb-1">{videoData.name}</p>
           <p className="text-white/80 text-sm">{videoData.location}</p>
         </div>
       </div>
@@ -230,13 +228,6 @@ export function VideoTestimonials() {
       <div className="text-center mb-8">
         <h2 className="font-bold text-gray-900 mb-1 text-3xl">Our Stories</h2>
         <p className="text-gray-600 text-lg">See the joy we bring to our community</p>
-      </div>
-
-      {/* Featured Video */}
-      {renderVideoCard(mainVideo, true)}
-
-      <div className="text-center mb-6">
-        <h3 className="font-bold text-gray-900 text-xl">More Testimonials</h3>
       </div>
 
       {/* Video Carousel */}
@@ -253,14 +244,24 @@ export function VideoTestimonials() {
       <div className="flex items-center justify-center gap-4 mt-6">
         <button
           onClick={() => sliderRef.current?.slickPrev()}
-          className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all active:scale-95"
+          disabled={currentSlide === 0}
+          className={`w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white flex items-center justify-center shadow-lg transition-all ${
+            currentSlide === 0 
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:shadow-xl hover:scale-110 active:scale-95'
+          }`}
           aria-label="Previous testimonial"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={() => sliderRef.current?.slickNext()}
-          className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all active:scale-95"
+          disabled={currentSlide === videoTestimonials.length - 1}
+          className={`w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-center shadow-lg transition-all ${
+            currentSlide === videoTestimonials.length - 1
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:shadow-xl hover:scale-110 active:scale-95'
+          }`}
           aria-label="Next testimonial"
         >
           <ChevronRight className="w-6 h-6" />
