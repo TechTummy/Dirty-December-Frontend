@@ -56,6 +56,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   const [showLateJoinerModal, setShowLateJoinerModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submittingAction, setSubmittingAction] = useState<'pay' | 'reserve' | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(() => {
     const saved = localStorage.getItem('onboarding_state');
     return saved ? JSON.parse(saved).userChoice || null : null;
@@ -134,6 +135,19 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsResending(true);
+    try {
+      await auth.sendOtp(phone);
+      toast.success('OTP resent successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to resend OTP');
+      console.error(error);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -460,8 +474,12 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                 className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none text-center text-3xl tracking-[0.5em] font-bold transition-all"
                 maxLength={6}
               />
-              <button className="w-full text-sm text-purple-600 font-semibold mt-4 hover:text-purple-700">
-                Resend Code
+              <button 
+                onClick={handleResendOtp}
+                disabled={isResending}
+                className="w-full text-sm text-purple-600 font-semibold mt-4 hover:text-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isResending ? 'Resending...' : 'Resend Code'}
               </button>
             </Card>
 
