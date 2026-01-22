@@ -84,9 +84,10 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     package: u.package?.name || 'No Package',
     packageId: u.package_id?.toString(),
     status: u.status || 'active',
+    slots: Number(u.slots) || 1,
     // Calculate contributions from user data
     contributions: u.package?.monthly_contribution 
-      ? Math.floor(Number(u.total_contribution || 0) / (Number(u.package.monthly_contribution) * (u.slots || 1))) 
+      ? Math.floor(Number(u.total_contribution || 0) / (Number(u.package.monthly_contribution) * (Number(u.slots) || 1))) 
       : 0,
     totalPaid: Number(u.total_contribution || 0),
     joinedDate: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
@@ -418,7 +419,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                   </td>
                   <td className="py-4 px-4">
                     <p className="font-semibold text-gray-900">₦{user.totalPaid.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">of ₦{displayPackage.yearlyTotal.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">of ₦{(displayPackage.yearlyTotal * user.slots).toLocaleString()}</p>
                   </td>
                   <td className="py-4 px-4">
                     <p className="text-sm text-gray-600">{user.joinedDate}</p>
@@ -639,7 +640,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                     <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                       <p className="text-xs text-emerald-700 mb-1">Total Paid</p>
                       <p className="text-2xl font-bold text-emerald-900">₦{viewingUser.totalPaid.toLocaleString()}</p>
-                      <p className="text-xs text-emerald-600 mt-1">of ₦{displayPackage.yearlyTotal.toLocaleString()}</p>
+                      <p className="text-xs text-emerald-600 mt-1">of ₦{(displayPackage.yearlyTotal * (viewingUser.slots || 1)).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
