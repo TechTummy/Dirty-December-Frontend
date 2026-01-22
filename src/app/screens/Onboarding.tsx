@@ -961,6 +961,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
               <GradientButton 
                 onClick={() => handleProfileSubmit('pay')} 
                 disabled={!name.trim() || !email.trim() || password.length < 6 || !userState || isLoading}
+                className={new Date().getMonth() >= 7 ? 'hidden' : ''}
               >
                 {userChoice === 'catchup' ? 'Continue to Payment' : (submittingAction === 'pay' ? 'Creating Account...' : 'Start Contributing')}
               </GradientButton>

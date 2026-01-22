@@ -647,22 +647,40 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
                 </div>
               )}
 
-              <button
-                onClick={() => setShowDeliveryModal(true)}
-                className="w-full py-2.5 px-4 rounded-xl bg-white border border-gray-200 hover:border-gray-300 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
-              >
-                <span className="font-semibold text-gray-700 text-sm">Update Delivery Info</span>
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              </button>
+              {new Date().getMonth() >= 7 ? (
+                <button
+                  onClick={() => setShowDeliveryModal(true)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-white border border-gray-200 hover:border-gray-300 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
+                >
+                  <span className="font-semibold text-gray-700 text-sm">Update Delivery Info</span>
+                  <ChevronRight className="w-4 h-4 text-gray-600" />
+                </button>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    Delivery updates are locked until August 1st.
+                  </p>
+                </div>
+              )}
             </>
           ) : (
-            <button
-              onClick={() => setShowDeliveryModal(true)}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-white font-semibold"
-            >
-              <MapPin className="w-5 h-5" />
-              Set Delivery Information
-            </button>
+            new Date().getMonth() >= 7 ? (
+              <button
+                onClick={() => setShowDeliveryModal(true)}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-white font-semibold"
+              >
+                <MapPin className="w-5 h-5" />
+                Set Delivery Information
+              </button>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+                 <p className="text-sm text-gray-500 mb-2">Delivery selection opens on August 1st</p>
+                 <button disabled className="px-4 py-2 bg-slate-200 text-slate-400 rounded-lg text-sm font-medium cursor-not-allowed">
+                    Set Delivery Info
+                 </button>
+              </div>
+            )
           )}
         </Card>
 

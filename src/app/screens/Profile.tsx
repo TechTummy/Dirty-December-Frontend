@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, Mail, Phone, Package, Save, AlertCircle, CheckCircle, Truck, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Package, Save, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card } from '../components/Card';
 import { GradientButton } from '../components/GradientButton';
@@ -48,13 +49,7 @@ export function Profile({
     state: ''
   });
 
-  // Delivery info state
-  const [delivery, setDelivery] = useState({
-    type: 'pickup',
-    address: '',
-    state: '',
-    lga: ''
-  });
+
 
   // Notification states
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -85,24 +80,7 @@ export function Profile({
     });
   }, [userName, userPhone, userState]);
 
-  // Fetch saved delivery settings
-  const { data: deliverySettings, isLoading: isLoadingSettings } = useQuery({
-    queryKey: ['delivery-settings'],
-    queryFn: user.getDeliverySettings,
-  });
 
-  // Update state when data is fetched
-  useEffect(() => {
-    if (deliverySettings?.data) {
-      const data = deliverySettings.data;
-      setDelivery({
-        type: data.type || 'pickup',
-        address: data.street_address || '',
-        state: data.state || '',
-        lga: data.city || '' 
-      });
-    }
-  }, [deliverySettings]);
 
   // Profile Update Mutation
   const updateProfileMutation = useMutation({
@@ -128,20 +106,7 @@ export function Profile({
     }
   });
 
-  // Save Delivery Mutation
-  const saveDeliveryMutation = useMutation({
-    mutationFn: user.saveDeliverySettings,
-    onSuccess: () => {
-      setSuccessMessage('Delivery information saved');
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 3000);
-    },
-    onError: (error: any) => {
-      setErrorMessage(error.response?.data?.message || 'Failed to save delivery settings');
-      setShowErrorMessage(true);
-      setTimeout(() => setShowErrorMessage(false), 3000);
-    }
-  });
+
   
   // Safe fallback for display to prevent UI blocking
   const displayPackage = userPackage || {
@@ -163,28 +128,7 @@ export function Profile({
     updateProfileMutation.mutate(profileData);
   };
 
-  const handleSaveDelivery = () => {
-    if (delivery.type === 'delivery') {
-      if (!delivery.address || !delivery.state) {
-        setErrorMessage('Please fill in your delivery address and state');
-        setShowErrorMessage(true);
-        setTimeout(() => setShowErrorMessage(false), 3000);
-        return;
-      }
-    }
 
-    const payload = {
-      type: delivery.type,
-      ...(delivery.type === 'delivery' && {
-        street_address: delivery.address,
-        state: delivery.state,
-        city: delivery.lga, 
-        phone_number: profileData.phone // use updated phone
-      })
-    };
-
-    saveDeliveryMutation.mutate(payload);
-  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -347,80 +291,7 @@ export function Profile({
           </div>
         </Card>
 
-        {/* Delivery Information */}
-        <Card className="border-0 shadow-lg">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-md shadow-amber-500/30">
-              <Truck className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-lg font-bold text-gray-900">Delivery Information</h2>
-          </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Delivery Method</label>
-              <select
-                value={delivery.type}
-                onChange={(e) => setDelivery({ ...delivery, type: e.target.value as 'pickup' | 'delivery' })}
-                className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
-              >
-                <option value="pickup">Pickup at Collection Point</option>
-                <option value="delivery">Home Delivery</option>
-              </select>
-            </div>
-
-            {delivery.type === 'delivery' && (
-              <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Street Address</label>
-                  <input
-                    type="text"
-                    value={delivery.address}
-                    onChange={(e) => setDelivery({ ...delivery, address: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter your street address"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">State</label>
-                    <select
-                      value={delivery.state}
-                      onChange={(e) => setDelivery({ ...delivery, state: e.target.value })}
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
-                    >
-                      <option value="">Select State</option>
-                      {nigerianStates.map(state => (
-                        <option key={state} value={state}>{state}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">LGA</label>
-                    <input
-                      type="text"
-                      value={delivery.lga}
-                      onChange={(e) => setDelivery({ ...delivery, lga: e.target.value })}
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Enter LGA"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <GradientButton onClick={handleSaveDelivery} disabled={saveDeliveryMutation.isPending}>
-              <span className="flex items-center gap-2">
-                {saveDeliveryMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saveDeliveryMutation.isPending ? 'Saving...' : 'Save Delivery Info'}
-              </span>
-            </GradientButton>
-          </div>
-        </Card>
       </div>
     </div>
   );

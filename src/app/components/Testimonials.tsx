@@ -15,48 +15,39 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     id: 1,
-    name: "Amaka Okonkwo",
-    year: 2024,
-    quote: "Belleza Detty December saved me ₦32,000 this year! I got everything I needed for the holidays without breaking the bank.",
-    savings: "₦32,000",
-    avatar: "AO",
-    location: "Lagos"
+    name: "Motunrayo",
+    year: 2023,
+    quote: "I join Detty December since 2023 when I was in Benue state, someone posted the link then I join with faith. The first year my package was sent to my mom she snap what she received to me I never expect such kind of plenty food I thought you won't be able to deliver but you convinced me with your accountability kudos to you ma’am... people that joined through me never regret joining too we looking forward to many years of Detty December with you. Thank God na this same Akure we Dey forever is the deal.",
+    savings: "Package Value Verified",
+    avatar: "MO",
+    location: "Akure (Formerly Benue)"
   },
   {
     id: 2,
-    name: "Chidi Nwosu",
+    name: "Pretty Tarhi Tina",
     year: 2023,
-    quote: "Best decision I made! My family was shocked when I brought home premium provisions in December. The bulk buying power is real.",
-    savings: "₦28,500",
-    avatar: "CN",
-    location: "Abuja"
+    quote: "For the past 3 years, i have never had any time to worry about buying Rice and other food stuffs or going to the market during Christmas! I always have foodstuffs to give my daughter whenever she is going back to school! Belleza Detty December has always come to my Rescue. I'm so glad i joined this Group! No regrets at all.",
+    savings: "Consistent Saver (3 Years)",
+    avatar: "PT",
+    location: "Oba-ile Akure"
   },
   {
     id: 3,
-    name: "Blessing Adeyemi",
+    name: "Olayinka",
     year: 2024,
-    quote: "I was skeptical at first, but after seeing my December package, I'm already registered for 2025. Worth every kobo!",
-    savings: "₦30,200",
-    avatar: "BA",
-    location: "Ibadan"
+    quote: "I thank God for the success of this year detty December. God bless this platform to put food on my table. I was very happy when I receive my package (one bag of rice, pasta, noodles, cornflakes, seasoning cubes, 3 bottles of groundnut oil and many more)... in fact my heart rejoice. Thank you Belleza.",
+    savings: "Full Package Received",
+    avatar: "OL",
+    location: "Lagos"
   },
   {
     id: 4,
-    name: "Emeka Johnson",
-    year: 2023,
-    quote: "The community aspect makes it even better. We share tips and celebrate together. It's more than just savings!",
-    savings: "₦25,700",
-    avatar: "EJ",
-    location: "Port Harcourt"
-  },
-  {
-    id: 5,
-    name: "Ngozi Okeke",
-    year: 2024,
-    quote: "I convinced my entire family to join after my first year. Now we all save together and December feels like a blessing!",
-    savings: "₦31,400",
-    avatar: "NO",
-    location: "Enugu"
+    name: "Mary",
+    year: 2019,
+    quote: "I have been doing this with belleza for 5 years now even when we started with 3k from 3k to 4k and now 5k and have even recommended the detty December group to more than 6 people and it has truly been an amazing experience... This platform has helped us give consistently and make real impact. I encourage more people to join and be part of this good work.",
+    savings: "5-Year Member",
+    avatar: "MA",
+    location: "Akure"
   }
 ];
 
@@ -146,8 +137,8 @@ export function Testimonials() {
               </p>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <span className="text-sm text-gray-500 font-medium">Total Savings</span>
-                <span className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                <span className="text-sm text-gray-500 font-medium">Membership Highlight</span>
+                <span className="text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                   {testimonial.savings}
                 </span>
               </div>
