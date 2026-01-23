@@ -248,6 +248,13 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
 
   const handleProfileSubmit = async (action: 'pay' | 'reserve' = 'pay') => {
     if (name.trim() && email.trim() && password.length >= 6 && userState) {
+        // Strict Email Validation
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email.trim())) {
+            toast.error('Please enter a valid email address');
+            return;
+        }
+
        if (registrationToken) {
          setSubmittingAction(action);
          setIsLoading(true);
