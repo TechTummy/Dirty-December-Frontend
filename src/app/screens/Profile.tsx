@@ -46,6 +46,7 @@ export function Profile({
   const [profileData, setProfileData] = useState({
     name: userName,
     phone: userPhone || '',
+    email: userEmail || '',
     state: ''
   });
 
@@ -76,9 +77,10 @@ export function Profile({
     setProfileData({
       name: userName,
       phone: userPhone || '',
+      email: userEmail || '',
       state: userState || ''
     });
-  }, [userName, userPhone, userState]);
+  }, [userName, userPhone, userEmail, userState]);
 
 
 
@@ -125,6 +127,15 @@ export function Profile({
   };
 
   const handleUpdateProfile = () => {
+    // Strict Email Validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(profileData.email.trim())) {
+      setErrorMessage('Please enter a valid email address');
+      setShowErrorMessage(true);
+      setTimeout(() => setShowErrorMessage(false), 3000);
+      return;
+    }
+    
     updateProfileMutation.mutate(profileData);
   };
 
@@ -219,18 +230,18 @@ export function Profile({
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={userEmail}
-                  readOnly
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed focus:outline-none"
-                />
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
               </div>
-            </div>
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
