@@ -14,6 +14,8 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDelivery, setFilterDelivery] = useState('all');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
   const [selectedUserAddress, setSelectedUserAddress] = useState<any | null>(null);
   const [viewingUser, setViewingUser] = useState<any | null>(null);
 
@@ -27,8 +29,8 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
 
   // Fetch users for this package
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: () => admin.getUsers(),
+    queryKey: ['admin-users', packageId, page, perPage],
+    queryFn: () => admin.getUsers({ page, per_page: perPage, package_id: packageId }),
   });
 
   // Fetch transactions for this package to calculate totals
@@ -75,8 +77,8 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
         .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0)
     : 0;
 
-  // Filter users for this package
-  const allUsers = (usersData?.data?.data || []).map((u: any) => ({
+  // Filter users for this package - Users are now filtered by API
+  const usersList = (usersData?.data?.data || []).map((u: any) => ({
     id: u.id,
     name: u.name,
     phone: u.phone,
@@ -99,33 +101,31 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
       landmark: u.delivery_detail.landmark,
       phoneNumber: u.delivery_detail.phone_number || u.phone
     } : null
-  })).filter((u: any) => u.packageId === packageId);
+  }));
 
   // Calculate package stats from real data
-  const totalUsers = packageData.stats?.total_users ?? allUsers.length;
-  const activeUsers = allUsers.filter((u: any) => u.status === 'active').length;
+  // Use metadata total if available, otherwise fallback to list length (only accurate if < per_page)
+  const totalUsers = usersData?.data?.total || packageData.stats?.total_users || usersList.length;
+  const activeUsers = usersData?.data?.data?.filter((u: any) => u.status === 'active').length ?? 0; // This is only for current page, ideally should come from stats
   
-  // Use transaction sum if available, otherwise sum from user records
+  // Use transaction sum if available, otherwise sum from user records (approximate if paginated)
   const totalContributions = packageData.stats?.total_contributions ?? (
     realTotalContributions > 0 
       ? realTotalContributions 
-      : allUsers.reduce((sum: number, user: any) => sum + user.totalPaid, 0)
+      : usersList.reduce((sum: number, user: any) => sum + user.totalPaid, 0)
   );
   
-  const expectedTotal = packageData.stats?.expected_total ?? (allUsers.length * displayPackage.yearlyTotal); 
+  const expectedTotal = packageData.stats?.expected_total ?? (totalUsers * displayPackage.yearlyTotal); 
   
-  const avgMonthsContributed = packageData.stats?.avg_months_paid ?? (
-    totalUsers > 0 
-      ? allUsers.reduce((sum: number, user: any) => sum + user.contributions, 0) / totalUsers 
-      : 0
-  );
+  const avgMonthsContributed = packageData.stats?.avg_months_paid ?? 0;
+    
     
   const completionRate = packageData.stats?.progress_percentage ?? (
     expectedTotal > 0 ? (totalContributions / expectedTotal) * 100 : 0
   );
 
-  // Filter logic
-  const filteredUsers = allUsers.filter((user: any) => {
+  // Filter logic - Applied to CURRENT PAGE only
+  const filteredUsers = usersList.filter((user: any) => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone.includes(searchTerm) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -472,6 +472,75 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
           </div>
         </div>
       </Card>
+
+      {/* Pagination Controls */}
+      {usersData?.data?.current_page && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+               <p className="text-sm text-gray-500">
+               Showing <span className="font-medium">{usersData.data.from || 0}</span> to <span className="font-medium">{usersData.data.to || 0}</span> of <span className="font-medium">{usersData.data.total || 0}</span> members
+               </p>
+               <div className="flex items-center gap-2">
+               <span className="text-sm text-gray-500">Rows per page:</span>
+               <select
+                    value={perPage}
+                    onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setPage(1); // Reset to first page on change
+                    }}
+                    className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-1"
+               >
+                    <option value={15}>15</option>
+                    <option value={30}>30</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+               </select>
+               </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || isLoadingUsers}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, usersData.data.last_page || 1) }, (_, i) => {
+                let pNum = i + 1;
+                if (usersData.data.last_page > 5) {
+                  if (page > 3) pNum = page - 2 + i;
+                  if (pNum > usersData.data.last_page) pNum = usersData.data.last_page - (4 - i);
+                }
+                
+                // Ensure pNum is valid
+                if (pNum <= 0) pNum = 1;
+
+                return (
+                  <button
+                    key={pNum}
+                    onClick={() => setPage(pNum)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                      page === pNum
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!usersData.data || page >= usersData.data.last_page || isLoadingUsers}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Delivery Address Modal */}
       {selectedUserAddress && (
