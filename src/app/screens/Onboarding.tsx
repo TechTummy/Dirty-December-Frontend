@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { auth } from '../../lib/api';
 import { GradientButton } from '../components/GradientButton';
 import { Card } from '../components/Card';
 import { LateJoinerModal } from '../components/LateJoinerModal';
 import { PaystackModal } from '../components/PaystackModal';
-import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft, Clock, Eye, EyeOff } from 'lucide-react';
+import { User, CheckCircle, AlertCircle, Sparkles, ArrowLeft, Clock, Eye, EyeOff, X, CreditCard, LayoutDashboard } from 'lucide-react';
 import { getRegistrationStatus, calculateProportionalValue } from '../utils/registrationLogic';
 import { Package } from '../data/packages';
 import { useQuery } from '@tanstack/react-query';
@@ -55,7 +55,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
   });
   const [showLateJoinerModal, setShowLateJoinerModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [submittingAction, setSubmittingAction] = useState<'pay' | 'reserve' | null>(null);
+  const [submittingAction, setSubmittingAction] = useState<'pay-now' | 'pay-later' | 'reserve' | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [userChoice, setUserChoice] = useState<'catchup' | 'reserve' | null>(() => {
     const saved = localStorage.getItem('onboarding_state');
@@ -85,13 +85,18 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     return saved ? JSON.parse(saved).quantity || 1 : 1;
   });
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPaymentChoiceModal, setShowPaymentChoiceModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
+  const isCompletedRef = useRef(false);
+
   const regStatus = getRegistrationStatus();
   const proportionalValue = calculateProportionalValue(regStatus.currentMonth);
 
   // Persistence Effect
   useEffect(() => {
+    if (isCompletedRef.current) return;
+    
     const stateToSave = {
       step,
       phone,
@@ -246,7 +251,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
     }
   };
 
-  const handleProfileSubmit = async (action: 'pay' | 'reserve' = 'pay') => {
+  const handleProfileSubmit = async (action: 'pay' | 'reserve' = 'pay', payImmediately: boolean = true) => {
     if (name.trim() && email.trim() && password.length >= 6 && userState) {
         // Strict Email Validation
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -256,7 +261,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
         }
 
        if (registrationToken) {
-         setSubmittingAction(action);
+         setSubmittingAction(action === 'reserve' ? 'reserve' : (payImmediately ? 'pay-now' : 'pay-later'));
          setIsLoading(true);
          try {
            if (action === 'reserve') {
@@ -276,6 +281,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
              }
              
              toast.success('Spot reserved successfully! We will notify you when payment opens.');
+             isCompletedRef.current = true; // Prevent re-saving to localStorage
              localStorage.removeItem('onboarding_state'); // Clear persistence on success
              onComplete('reserved', selectedPackage?.name, quantity);
            } else {
@@ -297,15 +303,26 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                localStorage.setItem('user_data', JSON.stringify(response.data.user));
              }
 
+             // Clear onboarding progress from storage as registration is complete
+             isCompletedRef.current = true; // Prevent re-saving to localStorage
+             localStorage.removeItem('onboarding_state');
+
              if (userChoice === 'reserve') {
                toast.success('Registration completed successfully!');
-               localStorage.removeItem('onboarding_state'); // Clear persistence on success
                onComplete('reserved', selectedPackage?.name, quantity);
              } else {
-               // Registration successful! Now show payment modal
-               // The PaystackModal will use the token we just saved to initialize the transaction
-               toast.success('Registration successful! Please complete your payment.');
-               setShowPaymentModal(true);
+               // Registration successful!
+               setShowPaymentChoiceModal(false); // Close choice modal if open
+               
+               if (payImmediately) {
+                  // Show payment modal
+                  toast.success('Registration successful! Please complete your payment.');
+                  setShowPaymentModal(true);
+               } else {
+                  // Skip payment, go to dashboard
+                  toast.success('Registration successful!');
+                  onComplete('active', selectedPackage?.name, quantity);
+               }
              }
            }
          } catch (error: any) {
@@ -966,11 +983,19 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
 
             <div className="flex flex-col gap-3">
               <GradientButton 
-                onClick={() => handleProfileSubmit('pay')} 
+                onClick={() => {
+                  if (userChoice === 'catchup') {
+                    // Catchup always goes to payment
+                    handleProfileSubmit('pay', true);
+                  } else {
+                    // Normal flow opens choice modal
+                    setShowPaymentChoiceModal(true);
+                  }
+                }} 
                 disabled={!name.trim() || !email.trim() || password.length < 6 || !userState || isLoading}
                 className={new Date().getMonth() >= 7 ? 'hidden' : ''}
               >
-                {userChoice === 'catchup' ? 'Continue to Payment' : (submittingAction === 'pay' ? 'Creating Account...' : 'Start Contributing')}
+                {userChoice === 'catchup' ? 'Continue to Payment' : (submittingAction === 'pay-now' ? 'Processing...' : 'Start Contributing')}
               </GradientButton>
               
               {!userChoice && (
@@ -1008,6 +1033,69 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
           onReserveNextYear={handleReserveNextYear}
           onClose={() => setShowLateJoinerModal(false)}
         />
+      )}
+
+      {/* Payment Choice Modal */}
+      {showPaymentChoiceModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                    <Sparkles className="w-6 h-6 text-white" />
+                 </div>
+                 <button 
+                   onClick={() => setShowPaymentChoiceModal(false)}
+                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                 >
+                   <X className="w-5 h-5 text-gray-400" />
+                 </button>
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Complete Registration</h3>
+              <p className="text-gray-600 mb-8">
+                You're all set! Would you like to make your first contribution now or head to your dashboard?
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleProfileSubmit('pay', true)}
+                  disabled={isLoading}
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-xl font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  {submittingAction === 'pay-now' && isLoading ? (
+                    'Processing...'
+                  ) : (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      Make Payment Now
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleProfileSubmit('pay', false)}
+                  disabled={isLoading}
+                  className="w-full py-3.5 px-4 bg-white border-2 border-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  {submittingAction === 'pay-later' && isLoading ? (
+                    'Processing...'
+                  ) : (
+                    <>
+                      <LayoutDashboard className="w-5 h-5 text-gray-500" />
+                      Continue to Dashboard
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-gray-100 text-center">
+              <p className="text-xs text-gray-500">
+                You can always contribute later from your dashboard
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Paystack Payment Modal */}

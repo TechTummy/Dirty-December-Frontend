@@ -41,14 +41,22 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterMonth, setFilterMonth] = useState('all');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [showProofPreview, setShowProofPreview] = useState(false);
   
   // ... (keeping existing query hooks) ...
   // Fetch Transactions (Contributions)
+  // Fetch Transactions (Contributions)
   const { data: transactionsData, isLoading: isLoadingTransactions, refetch: refetchContributions } = useQuery({
-    queryKey: ['admin-transactions', packageId],
-    queryFn: () => admin.getTransactions({ package_id: packageId }),
+    queryKey: ['admin-transactions', packageId, page, perPage, filterStatus],
+    queryFn: () => admin.getTransactions({ 
+      package_id: packageId, 
+      page,
+      per_page: perPage,
+      status: filterStatus !== 'all' ? filterStatus : undefined
+    }),
     enabled: activeTab === 'contributions'
   });
 
@@ -606,6 +614,75 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
           )}
         </div>
       </Card>
+
+      {/* Pagination Controls */}
+      {activeTab === 'contributions' && transactionsData?.data?.current_page && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-500">
+              Showing <span className="font-medium">{transactionsData.data.from || 0}</span> to <span className="font-medium">{transactionsData.data.to || 0}</span> of <span className="font-medium">{transactionsData.data.total || 0}</span> results
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Rows per page:</span>
+              <select
+                value={perPage}
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1); // Reset to first page on change
+                }}
+                className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-1"
+              >
+                <option value={15}>15</option>
+                <option value={30}>30</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || isLoadingTransactions}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, transactionsData.data.last_page || 1) }, (_, i) => {
+                let pNum = i + 1;
+                if (transactionsData.data.last_page > 5) {
+                  if (page > 3) pNum = page - 2 + i;
+                  if (pNum > transactionsData.data.last_page) pNum = transactionsData.data.last_page - (4 - i);
+                }
+                
+                // Ensure pNum is valid
+                if (pNum <= 0) pNum = 1;
+
+                return (
+                  <button
+                    key={pNum}
+                    onClick={() => setPage(pNum)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                      page === pNum
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!transactionsData.data || page >= transactionsData.data.last_page || isLoadingTransactions}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Contribution Detail Modal */}
       {selectedContribution && (

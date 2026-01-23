@@ -170,7 +170,7 @@ export const admin = {
         const response = await adminApi.post('/api/v1/admin/reminders/trigger');
         return response.data;
     },
-    getUsers: async (params?: { page?: number; per_page?: number }) => {
+    getUsers: async (params?: { page?: number; per_page?: number; package_id?: string }) => {
         const response = await adminApi.get('/api/v1/admin/users', { params });
         return response.data;
     },
@@ -210,7 +210,7 @@ export const admin = {
         const response = await adminApi.delete(`/api/v1/admin/packages/${id}`);
         return response.data;
     },
-    getTransactions: async (params?: { package_id?: string; status?: string }) => {
+    getTransactions: async (params?: { package_id?: string; status?: string; page?: number; per_page?: number }) => {
         const response = await adminApi.get('/api/v1/admin/transactions', { params });
         return response.data;
     },
