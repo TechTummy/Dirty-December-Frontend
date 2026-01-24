@@ -253,12 +253,24 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
 
       {/* Sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto p-6 bg-white/80 backdrop-blur-xl border-t border-gray-200">
-        <GradientButton onClick={() => onGetStarted()} disabled={!mergedPackages || mergedPackages.length === 0}>
-          <span className="flex items-center justify-center gap-2">
-            Get Started
-            <ArrowRight className="w-5 h-5" />
-          </span>
-        </GradientButton>
+        <div className="flex gap-3">
+          <button 
+            onClick={onSignIn}
+            className="flex-1 py-3 px-4 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 shadow-sm active:scale-[0.98] transition-all hover:bg-gray-50"
+          >
+            Sign In
+          </button>
+          <GradientButton 
+            className="flex-1" 
+            onClick={() => onGetStarted()} 
+            disabled={!mergedPackages || mergedPackages.length === 0}
+          >
+            <span className="flex items-center justify-center gap-2">
+              Get Started
+              <ArrowRight className="w-5 h-5" />
+            </span>
+          </GradientButton>
+        </div>
         <p className="text-center text-xs text-gray-500 mt-3">
           Join today and start your savings journey
         </p>
