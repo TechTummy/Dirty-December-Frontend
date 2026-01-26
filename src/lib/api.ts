@@ -106,27 +106,21 @@ adminApi.interceptors.response.use(
 
 // Auth API methods
 export const auth = {
-    sendOtp: async (phone: string) => {
-        const response = await api.post('/api/v1/users/auth/send-otp', { phone });
-        return response.data;
-    },
+
     getPackages: async () => {
         const response = await api.get('/api/v1/users/auth/packages');
         return response.data;
     },
-    verifyOtp: async (phone: string, code: string) => {
-        const response = await api.post('/api/v1/users/auth/verify-otp', { phone, code });
+
+    selectPackage: async (package_id: number, slots: number = 1) => {
+        const response = await api.post('/api/v1/users/auth/select-package', { package_id, slots });
         return response.data;
     },
-    selectPackage: async (registration_token: string, package_id: number) => {
-        const response = await api.post('/api/v1/users/auth/select-package', { registration_token, package_id });
-        return response.data;
-    },
-    completeRegistration: async (data: { registration_token: string; name: string; phone: string; email: string; password?: string; state?: string }) => {
+    completeRegistration: async (data: { name: string; phone: string; email: string; password?: string; state?: string }) => {
         const response = await api.post('/api/v1/users/auth/complete-registration', data);
         return response.data;
     },
-    makeReservation: async (data: { registration_token: string; name: string; phone: string; email: string; password?: string; state?: string }) => {
+    makeReservation: async (data: { name: string; phone: string; email: string; password?: string; state?: string }) => {
         const response = await api.post('/api/v1/users/auth/make-reservation', data);
         return response.data;
     },
@@ -134,10 +128,7 @@ export const auth = {
         const response = await api.post('/api/v1/users/auth/login', data);
         return response.data;
     },
-    selectSlot: async (registration_token: string, slots: number) => {
-        const response = await api.post('/api/v1/users/auth/select-slot', { registration_token, slots });
-        return response.data;
-    },
+
     forgotPassword: async (identifier: string) => {
         const response = await api.post('/api/v1/users/auth/forgot-password', { identifier });
         return response.data;
