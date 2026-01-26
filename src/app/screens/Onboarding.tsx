@@ -590,7 +590,7 @@ export function Onboarding({ onComplete, preSelectedPackageId, onBack }: Onboard
                </label>
                <input
                  type="tel"
-                 placeholder="080 1234 5678"
+                 placeholder="Enter your phone number"
                  value={phone}
                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none transition-all"
