@@ -85,9 +85,7 @@ export default function App() {
   };
 
   const handleGetStarted = (packageId?: string) => {
-    if (packageId) {
-      setPreSelectedPackageId(packageId);
-    }
+    setPreSelectedPackageId(packageId || null);
     navigate('/onboarding');
   };
 
