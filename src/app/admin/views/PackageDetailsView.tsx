@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, DollarSign, TrendingUp, Calendar, ArrowLeft, Search, Eye, Ban, CheckCircle, Clock, MapPin, Truck, X, Receipt, Loader } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '../../components/Card';
@@ -16,6 +16,10 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   const [filterDelivery, setFilterDelivery] = useState('all');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filterStatus, filterDelivery, searchTerm]);
   const [selectedUserAddress, setSelectedUserAddress] = useState<any | null>(null);
   const [viewingUser, setViewingUser] = useState<any | null>(null);
 
@@ -29,15 +33,17 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
 
   // Fetch users for this package
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['admin-users', packageId, page, perPage],
-    queryFn: () => admin.getUsers({ page, per_page: perPage, package_id: packageId }),
+    queryKey: ['admin-users', packageId, page, perPage, filterStatus],
+    queryFn: () => admin.getUsers({ 
+      page, 
+      per_page: perPage, 
+      package_id: packageId,
+      status: filterStatus !== 'all' ? filterStatus : undefined
+    }),
   });
 
-  // Fetch transactions for this package to calculate totals
-  const { data: transactionsData } = useQuery({
-    queryKey: ['admin-package-transactions', packageId],
-    queryFn: () => admin.getTransactions({ package_id: packageId }),
-  });
+  // Fetch transactions for this package to calculate totals - REMOVED (Using API Stats)
+  // const { data: transactionsData } = useQuery({ ... });
 
   if (isLoadingPackage || isLoadingUsers) {
     return (
@@ -56,10 +62,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     );
   }
 
-  // Normalize package data for display (handle API vs static structure differences if any)
-  // Assuming API returns similar structure or we adapt here.
-  // For now, let's map essential UI fields if they differ, but based on PackagesManagement, they are similar.
-  // We might need to add fallback for gradient/shadow if API doesn't send them yet.
+  // Normalize package data for display
   const displayPackage = {
     ...packageData,
     gradient: packageData.gradient || 'from-indigo-500 via-purple-500 to-pink-500',
@@ -70,14 +73,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     description: packageData.description
   };
 
-  const packageTransactions = transactionsData?.data?.data || transactionsData?.data || [];
-  const realTotalContributions = Array.isArray(packageTransactions) 
-    ? packageTransactions
-        .filter((t: any) => t.status === 'approved' || t.status === 'confirmed')
-        .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0)
-    : 0;
-
-  // Filter users for this package - Users are now filtered by API
+  // Filter users for this package
   const usersList = (usersData?.data?.data || []).map((u: any) => ({
     id: u.id,
     name: u.name,
@@ -87,7 +83,6 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     packageId: u.package_id?.toString(),
     status: u.status || 'active',
     slots: Number(u.slots) || 1,
-    // Calculate contributions from user data
     contributions: u.package?.monthly_contribution 
       ? Math.floor(Number(u.total_contribution || 0) / (Number(u.package.monthly_contribution) * (Number(u.slots) || 1))) 
       : 0,
@@ -103,52 +98,61 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     } : null
   }));
 
-  // Calculate package stats from real data
-  // Use metadata total if available, otherwise fallback to list length (only accurate if < per_page)
-  const totalUsers = usersData?.data?.total || packageData.stats?.total_users || usersList.length;
-  const activeUsers = usersData?.data?.data?.filter((u: any) => u.status === 'active').length ?? 0; // This is only for current page, ideally should come from stats
+  // NEW: Use direct stats from API response (available in packages/{id} endpoint)
+  const stats = packageData.stats || {};
+
+  const totalUsers = stats.total_users ?? (usersData?.data?.total || 0);
+  const activeUsers = stats.active_users ?? 0;
   
-  // Use transaction sum if available, otherwise sum from user records (approximate if paginated)
-  const totalContributions = packageData.stats?.total_contributions ?? (
-    realTotalContributions > 0 
-      ? realTotalContributions 
-      : usersList.reduce((sum: number, user: any) => sum + user.totalPaid, 0)
-  );
+  const totalContributions = stats.confirmed_amount ?? stats.total_contributions ?? 0;
+  const expectedTotal = stats.expected_total ?? 0;
   
-  const expectedTotal = packageData.stats?.expected_total ?? (totalUsers * displayPackage.yearlyTotal); 
-  
-  const avgMonthsContributed = packageData.stats?.avg_months_paid ?? 0;
-    
-    
-  const completionRate = packageData.stats?.progress_percentage ?? (
-    expectedTotal > 0 ? (totalContributions / expectedTotal) * 100 : 0
-  );
+  const avgMonthsContributed = stats.avg_months_paid ?? 0;
+  const completionRate = stats.progress_percentage ?? 0;
 
   // Filter logic - Applied to CURRENT PAGE only
+  // Filter logic - Applied to CURRENT PAGE only
+  // Note: Status is filtered Server-Side now.
   const filteredUsers = usersList.filter((user: any) => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone.includes(searchTerm) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+    // Status is handled by API
     const matchesDelivery = filterDelivery === 'all' || user.deliveryMethod === filterDelivery;
-    return matchesSearch && matchesStatus && matchesDelivery;
+    return matchesSearch && matchesDelivery;
   });
 
   const getStatusBadge = (status: string) => {
-    if (status === 'active') {
-      return (
-        <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
-          <CheckCircle className="w-3 h-3" />
-          Active
-        </span>
-      );
+    switch (status) {
+      case 'active':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+            <CheckCircle className="w-3 h-3" />
+            Active
+          </span>
+        );
+      case 'suspended':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+            <X className="w-3 h-3" />
+            Suspended
+          </span>
+        );
+      case 'reserved':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+            <Clock className="w-3 h-3" />
+            Reserved
+          </span>
+        );
+      default: // inactive or unknown
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+            <Ban className="w-3 h-3" />
+            {status === 'inactive' ? 'Inactive' : status}
+          </span>
+        );
     }
-    return (
-      <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-        <Clock className="w-3 h-3" />
-        Reserved
-      </span>
-    );
   };
 
   return (
@@ -277,6 +281,8 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="reserved">Reserved</option>
+              <option value="suspended">Suspended</option>
+              <option value="inactive">Inactive</option>
             </select>
 
             <select

@@ -161,7 +161,15 @@ export const admin = {
         const response = await adminApi.post('/api/v1/admin/reminders/trigger');
         return response.data;
     },
-    getUsers: async (params?: { page?: number; per_page?: number; package_id?: string }) => {
+    getUsers: async (params?: {
+        page?: number;
+        per_page?: number;
+        package_id?: string;
+        status?: string;
+        payment_month?: number;
+        payment_year?: number;
+        completed_payments?: boolean;
+    }) => {
         const response = await adminApi.get('/api/v1/admin/users', { params });
         return response.data;
     },
