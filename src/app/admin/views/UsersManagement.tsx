@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Filter, Eye, CheckCircle, Clock, Download, X, MapPin, Save, Plus, Edit2, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Filter, Eye, CheckCircle, Clock, Download, X, MapPin, Save, Plus, Edit2, Trash2, Calendar, Ban } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
 import { admin } from '../../../lib/api';
@@ -36,6 +36,9 @@ export function UsersManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPackage, setFilterPackage] = useState('all');
+  const [filterPaymentMonth, setFilterPaymentMonth] = useState('all');
+  const [filterPaymentYear, setFilterPaymentYear] = useState('all');
+  const [filterCompletedPayments, setFilterCompletedPayments] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
@@ -53,9 +56,22 @@ export function UsersManagement() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments, searchTerm]);
+
   const { data: usersData, isLoading, refetch } = useQuery({
-    queryKey: ['adminUsers', page, perPage],
-    queryFn: () => admin.getUsers({ page, per_page: perPage }),
+    queryKey: ['adminUsers', page, perPage, filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments],
+    queryFn: () => admin.getUsers({ 
+      page, 
+      per_page: perPage,
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+      package_id: filterPackage !== 'all' ? filterPackage : undefined,
+      payment_month: filterPaymentMonth !== 'all' ? Number(filterPaymentMonth) : undefined,
+      payment_year: filterPaymentYear !== 'all' ? Number(filterPaymentYear) : undefined,
+      completed_payments: filterCompletedPayments ? true : undefined
+    }),
   });
 
   const { data: packagesData } = useQuery({
@@ -113,9 +129,12 @@ export function UsersManagement() {
   // The structure is typically: response.data.data (array) and response.data (meta)
   // But our api.ts returns response.data, so usersData IS the full object containing { data: [...], ... }
   
-  const rawUsers = Array.isArray(usersData?.data?.data) 
+  const rawUsersList = Array.isArray(usersData?.data?.data) 
     ? usersData.data.data 
     : (Array.isArray(usersData?.data) ? usersData.data : []);
+
+  // Deduplicate users by ID to prevent "same key" errors if backend returns duplicates
+  const rawUsers = Array.from(new Map(rawUsersList.map((item: any) => [item.id, item])).values());
 
   const paginationMeta = usersData?.data ? {
     current_page: usersData.data.current_page || 1,
@@ -164,27 +183,36 @@ export function UsersManagement() {
   });
 
   const getStatusBadge = (status: string) => {
-    if (status === 'active') {
-      return (
-        <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
-          <CheckCircle className="w-3 h-3" />
-          Active
-        </span>
-      );
-    } else if (status === 'suspended') {
-      return (
-        <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-          <X className="w-3 h-3" />
-          Suspended
-        </span>
-      );
+    switch (status) {
+      case 'active':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+            <CheckCircle className="w-3 h-3" />
+            Active
+          </span>
+        );
+      case 'suspended':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+            <X className="w-3 h-3" />
+            Suspended
+          </span>
+        );
+      case 'reserved':
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+            <Clock className="w-3 h-3" />
+            Reserved
+          </span>
+        );
+      default: // inactive or unknown
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+            <Ban className="w-3 h-3" />
+            {status === 'inactive' ? 'Inactive' : status}
+          </span>
+        );
     }
-    return (
-      <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-        <Clock className="w-3 h-3" />
-        Reserved
-      </span>
-    );
   };
 
   const getPackageBadge = (packageName: string) => {
@@ -217,16 +245,19 @@ export function UsersManagement() {
   };
 
   // Filter users
+  // Filter users
+  // Note: Status and Package are filtered Server-Side now.
+  // We only filter by Search Term locally (until API supports search)
   const filteredUsers = users.filter(user => {
     const matchesSearch = searchTerm === '' || 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone.includes(searchTerm) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    const matchesPackage = filterPackage === 'all' || user.package === filterPackage;
+    // Status and Package are handled by API, so we don't filter them here to avoid double-filtering issues.
+    // E.g. If API returns "Reserved" users, we just display them.
     
-    return matchesSearch && matchesStatus && matchesPackage;
+    return matchesSearch;
   });
 
   const handleAddUser = () => {
@@ -294,7 +325,9 @@ export function UsersManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-          <p className="text-gray-500 mt-1">{filteredUsers.length} registered users</p>
+          <p className="text-gray-500 mt-1">
+            {paginationMeta?.total ? paginationMeta.total : filteredUsers.length} registered users
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -331,6 +364,61 @@ export function UsersManagement() {
               </div>
             </div>
 
+            {/* Payment Month Filter */}
+            <div className="w-full lg:w-48">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <select
+                  value={filterPaymentMonth}
+                  onChange={(e) => setFilterPaymentMonth(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
+                >
+                  <option value="all">All Months</option>
+                  {[...Array(12)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Payment Year Filter */}
+            <div className="w-full lg:w-48">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <select
+                  value={filterPaymentYear}
+                  onChange={(e) => setFilterPaymentYear(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
+                >
+                  <option value="all">All Years</option>
+                  {[2025, 2026, 2027].map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Completed Payments Toggle */}
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="completedPayments"
+                checked={filterCompletedPayments}
+                onChange={(e) => setFilterCompletedPayments(e.target.checked)}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <label htmlFor="completedPayments" className="text-sm font-medium text-gray-700">
+                Completed Payments Only
+              </label>
+            </div>
+            
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-4">
             {/* Status Filter */}
             <div className="w-full lg:w-48">
               <div className="relative">
@@ -342,7 +430,9 @@ export function UsersManagement() {
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
+                  <option value="reserved">Reserved</option>
                   <option value="suspended">Suspended</option>
+                  <option value="inactive">Inactive</option>
                 </select>
               </div>
             </div>
@@ -357,9 +447,11 @@ export function UsersManagement() {
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
                 >
                   <option value="all">All Packages</option>
-                  <option value="Basic Bundle">Basic Bundle</option>
-                  <option value="Family Bundle">Family Bundle</option>
-                  <option value="Premium Bundle">Premium Bundle</option>
+                  {packages.map((pkg: any) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

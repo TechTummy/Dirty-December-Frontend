@@ -51,8 +51,8 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   }, {});
 
   // Calculate distribution
-  // We can use the total_users from stats if available, otherwise fall back to map
-  const totalUsers = rawPackages.reduce((sum: number, pkg: any) => sum + (pkg.stats?.total_users || userCountsMap[pkg.name] || 0), 0);
+  // Use the total_users from stats if available, otherwise fall back to map
+  const totalUsers = stats.total_users ?? rawPackages.reduce((sum: number, pkg: any) => sum + (pkg.stats?.total_users || userCountsMap[pkg.name] || 0), 0);
   
   const packageDistribution = rawPackages.map((pkg: any, index: number) => {
     const colors = ['bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-blue-500', 'bg-rose-500', 'bg-cyan-500'];
@@ -252,32 +252,59 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
           </div>
         </Card>
 
-        {/* Package Distribution */}
-        <Card className="border-0 shadow-lg">
-          <h2 className="font-bold text-gray-900 text-lg mb-6">Package Distribution</h2>
-          
-          <div className="space-y-4">
-            {packageDistribution.map((pkg: { name: string; count: number; color: string; percentage: number }, index: number) => (
-              <div key={index}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">{pkg.name}</span>
-                  <span className="text-sm font-bold text-gray-900">{pkg.count} users</span>
+        {/* Package & Status Distribution */}
+        <Card className="border-0 shadow-lg flex flex-col gap-6">
+          {/* Package Distribution */}
+          <div>
+            <h2 className="font-bold text-gray-900 text-lg mb-4">Package Distribution</h2>
+            <div className="space-y-4">
+              {packageDistribution.map((pkg: { name: string; count: number; color: string; percentage: number }, index: number) => (
+                <div key={index}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">{pkg.name}</span>
+                    <span className="text-sm font-bold text-gray-900">{pkg.count} users</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className={`${pkg.color} h-2.5 rounded-full transition-all duration-500`}
+                      style={{ width: `${pkg.percentage}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">{pkg.percentage}%</div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div
-                    className={`${pkg.color} h-2.5 rounded-full transition-all duration-500`}
-                    style={{ width: `${pkg.percentage}%` }}
-                  />
-                </div>
-                <div className="text-xs text-gray-500 mt-1">{pkg.percentage}%</div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-100">
+          <div className="w-full h-px bg-gray-100" />
+
+          {/* User Status Breakdown */}
+          <div>
+             <h2 className="font-bold text-gray-900 text-lg mb-4">Membership Status</h2>
+             <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <p className="text-xs text-emerald-700 font-semibold mb-1">Active</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.user_status_counts?.active || 0}</p>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                    <p className="text-xs text-amber-700 font-semibold mb-1">Reserved</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.user_status_counts?.reserved || 0}</p>
+                </div>
+                <div className="p-3 bg-red-50 rounded-xl border border-red-100">
+                    <p className="text-xs text-red-700 font-semibold mb-1">Suspended</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.user_status_counts?.suspended || 0}</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-700 font-semibold mb-1">Inactive</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.user_status_counts?.inactive || 0}</p>
+                </div>
+             </div>
+          </div>
+
+          <div className="mt-auto pt-6 border-t border-gray-100">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900 mb-1">{totalUsers}</p>
-              <p className="text-sm text-gray-500">Total Members</p>
+              <p className="text-sm text-gray-500">Total Registered Members</p>
             </div>
           </div>
         </Card>
