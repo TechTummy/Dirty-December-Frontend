@@ -209,7 +209,7 @@ export const admin = {
         const response = await adminApi.delete(`/api/v1/admin/packages/${id}`);
         return response.data;
     },
-    getTransactions: async (params?: { package_id?: string; status?: string; page?: number; per_page?: number }) => {
+    getTransactions: async (params?: { package_id?: string; status?: string; page?: number; per_page?: number; search?: string; month?: string }) => {
         const response = await adminApi.get('/api/v1/admin/transactions', { params });
         return response.data;
     },

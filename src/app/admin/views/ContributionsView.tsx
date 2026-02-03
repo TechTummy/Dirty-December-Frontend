@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, Download, DollarSign, User, Image as ImageIcon, Loader, Truck, Layers } from 'lucide-react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '../../components/Card';
 import { admin } from '../../../lib/api';
 
@@ -40,7 +39,6 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const [activeTab, setActiveTab] = useState<'contributions' | 'delivery'>('contributions');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterMonth, setFilterMonth] = useState('all');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
@@ -49,51 +47,31 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   // ... (keeping existing query hooks) ...
   // Fetch Transactions (Contributions)
   // Fetch Transactions (Contributions)
-  const { data: transactionsData, isLoading: isLoadingTransactions, refetch: refetchContributions } = useQuery({
-    queryKey: ['admin-transactions', packageId, page, perPage, filterStatus],
+  const { data: transactionsData, isLoading: isLoadingTransactions } = useQuery({
+    queryKey: ['admin-transactions', packageId, page, perPage, filterStatus, searchTerm],
     queryFn: () => admin.getTransactions({ 
       package_id: packageId, 
       page,
       per_page: perPage,
-      status: filterStatus !== 'all' ? filterStatus : undefined
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+      search: searchTerm || undefined
     }),
     enabled: activeTab === 'contributions'
   });
 
   // Fetch Delivery Transactions
-  const { data: deliveryData, isLoading: isLoadingDelivery, refetch: refetchDelivery } = useQuery({
+  const { data: deliveryData, isLoading: isLoadingDelivery } = useQuery({
     queryKey: ['admin-delivery-transactions'],
     queryFn: () => admin.getDeliveryTransactions(),
     enabled: activeTab === 'delivery'
   });
 
-  // Approve Mutation
-  const approveMutation = useMutation({
-    mutationFn: admin.approveTransaction,
-    onSuccess: () => {
-      toast.success('Transaction approved successfully');
-      if (activeTab === 'contributions') refetchContributions();
-      else refetchDelivery();
-      setSelectedContribution(null);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to approve transaction');
-    }
-  });
 
-  // Decline Mutation
-  const declineMutation = useMutation({
-    mutationFn: admin.declineTransaction,
-    onSuccess: () => {
-      toast.success('Transaction declined');
-      if (activeTab === 'contributions') refetchContributions();
-      else refetchDelivery();
-      setSelectedContribution(null);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to decline transaction');
-    }
-  });
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filterStatus, searchTerm]);
 
   // Derived state from API data
   const rawContributions = transactionsData?.data?.data || transactionsData?.data || [];
@@ -177,30 +155,19 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     description: packageData.description
   };
 
-  const handleApprove = (contributionId: string) => {
-    approveMutation.mutate(contributionId);
-  };
 
-  const handleDecline = (contributionId: string) => {
-    declineMutation.mutate(contributionId);
-  };
 
-  const filteredContributions = currentList.filter(contribution => {
-    const matchesSearch = contribution.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contribution.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contribution.reference.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || contribution.status === filterStatus;
-    const matchesMonth = filterMonth === 'all' || contribution.month === filterMonth;
-    return matchesSearch && matchesStatus && matchesMonth;
-  });
+  const filteredContributions = currentList;
+
+  const packageStats = packageData.stats || {};
 
   const stats = {
-    total: currentList.length,
-    pending: currentList.filter(c => c.status === 'pending').length,
-    confirmed: currentList.filter(c => c.status === 'confirmed').length,
-    declined: currentList.filter(c => c.status === 'declined').length,
-    totalAmount: currentList.reduce((sum, c) => sum + c.amount, 0),
-    confirmedAmount: currentList.filter(c => c.status === 'confirmed').reduce((sum, c) => sum + c.amount, 0)
+    total: packageStats.total_submissions ?? (transactionsData?.data?.total || currentList.length),
+    pending: packageStats.pending_reviews ?? currentList.filter(c => c.status === 'pending').length,
+    confirmed: '***',
+    confirmedAmount: packageStats.confirmed_amount ?? currentList.filter(c => c.status === 'confirmed').reduce((sum, c) => sum + c.amount, 0),
+    // Additional helpful stats we can use later?
+    confirmedUsers: packageStats.confirmed_users ?? 0
   };
 
   const getStatusBadge = (status: string) => {
@@ -393,29 +360,11 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
+              <option value="approved">Confirmed</option>
               <option value="declined">Declined</option>
             </select>
 
-            <select
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="all">All Months</option>
-              <option value="January">January</option>
-              <option value="February">February</option>
-              <option value="March">March</option>
-              <option value="April">April</option>
-              <option value="May">May</option>
-              <option value="June">June</option>
-              <option value="July">July</option>
-              <option value="August">August</option>
-              <option value="September">September</option>
-              <option value="October">October</option>
-              <option value="November">November</option>
-              <option value="December">December</option>
-            </select>
+
 
             <button
               onClick={handleExport}
@@ -480,22 +429,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                   <Eye className="w-3.5 h-3.5" />
                   View
                 </button>
-                {contribution.status === 'pending' && (
-                  <>
-                    <button 
-                      onClick={() => handleApprove(contribution.id)}
-                      className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleDecline(contribution.id)}
-                      className="px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                      <XCircle className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
+
               </div>
             </div>
           ))}
@@ -583,22 +517,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                       >
                         <Eye className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
                       </button>
-                      {contribution.status === 'pending' && (
-                        <>
-                          <button 
-                            onClick={() => handleApprove(contribution.id)}
-                            className="p-2 hover:bg-emerald-50 rounded-lg transition-colors group"
-                          >
-                            <CheckCircle className="w-4 h-4 text-gray-400 group-hover:text-emerald-600" />
-                          </button>
-                          <button 
-                            onClick={() => handleDecline(contribution.id)}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-                          >
-                            <XCircle className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                          </button>
-                        </>
-                      )}
+
                     </div>
                   </td>
                 </tr>
@@ -783,31 +702,12 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
 
               {/* Modal Footer */}
               <div className="px-6 py-4 border-t border-gray-100 bg-slate-50">
-                {selectedContribution.status === 'pending' ? (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleDecline(selectedContribution.id)}
-                      className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all text-white font-semibold flex items-center justify-center gap-2"
+                   <button
+                      onClick={() => setSelectedContribution(null)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors font-semibold"
                     >
-                      <XCircle className="w-4 h-4" />
-                      Decline
+                      Close
                     </button>
-                    <button
-                      onClick={() => handleApprove(selectedContribution.id)}
-                      className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 transition-all text-white font-semibold flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Approve
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setSelectedContribution(null)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 transition-all text-white font-semibold"
-                  >
-                    Close
-                  </button>
-                )}
               </div>
             </div>
           </div>
