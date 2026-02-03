@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, Eye, CheckCircle, Clock, Download, X, MapPin, Save, Plus, Edit2, Trash2, Calendar, Ban } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card } from '../../components/Card';
 import { GradientButton } from '../../components/GradientButton';
 import { admin } from '../../../lib/api';
@@ -87,13 +88,15 @@ export function UsersManagement() {
       slots: data.quantity
     }),
     onSuccess: () => {
-      // toast.success('User created successfully'); // Toast not imported?
+      toast.success('User created successfully');
       refetch();
     },
     onError: (error: any) => {
-      // toast.error(error.message);
       console.error(error);
-      alert('Failed to create user. Please try again.');
+      const validationError = error.response?.data?.errors 
+        ? Object.values(error.response.data.errors).flat()[0] 
+        : null;
+      toast.error(validationError || error.response?.data?.message || 'Failed to create user. Please try again.');
     }
   });
 
@@ -110,19 +113,31 @@ export function UsersManagement() {
       return admin.updateUser(data.id, payload);
     },
     onSuccess: () => {
+      toast.success('User updated successfully');
       refetch();
     },
     onError: (error: any) => {
       console.error(error);
-      alert('Failed to update user. Please try again.');
+      const validationError = error.response?.data?.errors 
+        ? Object.values(error.response.data.errors).flat()[0] 
+        : null;
+      toast.error(validationError || error.response?.data?.message || 'Failed to update user. Please try again.');
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: admin.deleteUser,
     onSuccess: () => {
+      toast.success('User deleted successfully');
       refetch();
     },
+    onError: (error: any) => {
+      console.error(error);
+      const validationError = error.response?.data?.errors 
+        ? Object.values(error.response.data.errors).flat()[0] 
+        : null;
+      toast.error(validationError || error.response?.data?.message || 'Failed to delete user');
+    }
   });
 
   // API returns paginated response: { data: { data: [...], current_page: 1, ... } }
@@ -848,6 +863,7 @@ export function UsersManagement() {
                         <option value="active">Active</option>
                         <option value="reserved">Reserved</option>
                         <option value="suspended">Suspended</option>
+                        <option value="inactive">Inactive</option>
                       </select>
                     </div>
                   </div>

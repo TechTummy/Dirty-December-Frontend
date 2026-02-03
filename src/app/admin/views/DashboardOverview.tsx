@@ -3,7 +3,7 @@ import { Card } from '../../components/Card';
 
 
 import { admin } from '../../../lib/api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+
   const { data: statsData, isLoading } = useQuery({
     queryKey: ['adminDashboardStats'],
     queryFn: admin.getDashboardStats,
@@ -208,12 +208,6 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
         <Card className="lg:col-span-2 border-0 shadow-lg">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-bold text-gray-900 text-lg">Recent Contributions</h2>
-            <button 
-              onClick={() => navigate('/admin/dashboard/contributions')} 
-              className="text-sm font-medium bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent hover:opacity-80"
-            >
-              View All
-            </button>
           </div>
 
           <div className="space-y-3">
@@ -228,6 +222,10 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
                     {contribution.status === 'pending' ? (
                       <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
                         Pending
+                      </span>
+                    ) : contribution.status === 'declined' ? (
+                      <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                        Declined
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
