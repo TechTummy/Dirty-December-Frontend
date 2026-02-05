@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Search, CheckCircle, XCircle, Clock, Eye, Download, DollarSign, User, Image as ImageIcon, Loader, Truck, Layers } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Card } from '../../components/Card';
 import { admin } from '../../../lib/api';
 
@@ -36,6 +37,7 @@ const getMonthName = (month: number) => {
 };
 
 export function ContributionsView({ packageId, onBack }: ContributionsViewProps) {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'contributions' | 'delivery'>('contributions');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -64,6 +66,32 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
     queryKey: ['admin-delivery-transactions'],
     queryFn: () => admin.getDeliveryTransactions(),
     enabled: activeTab === 'delivery'
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: admin.approveTransaction,
+    onSuccess: () => {
+      toast.success('Transaction approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-delivery-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['adminDashboardStats'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to approve transaction');
+    }
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: admin.declineTransaction,
+    onSuccess: () => {
+      toast.success('Transaction declined successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-delivery-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['adminDashboardStats'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to decline transaction');
+    }
   });
 
 
@@ -429,7 +457,34 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                   <Eye className="w-3.5 h-3.5" />
                   View
                 </button>
-
+                {contribution.status === 'pending' && (
+                  <>
+                    <button 
+                      onClick={() => {
+                        if (confirm('Are you sure you want to approve this transaction?')) {
+                          approveMutation.mutate(contribution.id);
+                        }
+                      }}
+                      disabled={approveMutation.isPending}
+                      className="flex-1 text-xs px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors font-medium flex items-center justify-center gap-1.5"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Approve
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm('Are you sure you want to decline this transaction?')) {
+                          declineMutation.mutate(contribution.id);
+                        }
+                      }}
+                      disabled={declineMutation.isPending}
+                      className="flex-1 text-xs px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors font-medium flex items-center justify-center gap-1.5"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      Decline
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -514,10 +569,38 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                       <button 
                         onClick={() => setSelectedContribution(contribution)}
                         className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                        title="View Details"
                       >
                         <Eye className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
                       </button>
-
+                      {contribution.status === 'pending' && (
+                        <>
+                          <button 
+                            onClick={() => {
+                              if (confirm('Are you sure you want to approve this transaction?')) {
+                                approveMutation.mutate(contribution.id);
+                              }
+                            }}
+                            disabled={approveMutation.isPending}
+                            className="p-2 hover:bg-emerald-50 rounded-lg transition-colors group"
+                            title="Approve Transaction"
+                          >
+                            <CheckCircle className="w-4 h-4 text-gray-400 group-hover:text-emerald-600" />
+                          </button>
+                          <button 
+                            onClick={() => {
+                                if (confirm('Are you sure you want to decline this transaction?')) {
+                                  declineMutation.mutate(contribution.id);
+                                }
+                            }}
+                            disabled={declineMutation.isPending}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                            title="Decline Transaction"
+                          >
+                            <XCircle className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
