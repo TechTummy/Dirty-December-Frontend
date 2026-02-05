@@ -443,25 +443,25 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <div className={`px-3 py-1.5 rounded-full bg-gradient-to-r ${userPackage.gradient} inline-block`}>
-                  <span className="text-xs font-bold text-white">{userPackage.name.toUpperCase()}</span>
+                  <span className="text-xs font-bold text-white">{userPackage.name.toUpperCase()} PACKAGE</span>
                 </div>
                 <div className="px-2.5 py-1 rounded-full bg-purple-100 inline-block">
                   <span className="text-xs font-bold text-purple-700">{quantity} {quantity === 1 ? 'Slot' : 'Slots'}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-600 font-medium">
-                Monthly: ₦{(userPackage.monthlyAmount * quantity).toLocaleString()}
+                Installment Amount: ₦{(userPackage.monthlyAmount * quantity).toLocaleString()}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500">Expected Total</p>
+              <p className="text-xs text-gray-500">Total Package Price</p>
               <p className="text-sm font-bold text-gray-900">₦{expectedTotal.toLocaleString()}</p>
             </div>
           </div>
 
           <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-gray-500 text-sm mb-1 font-medium">Total Contributed</p>
+              <p className="text-gray-500 text-sm mb-1 font-medium">Total Paid</p>
               <h2 className="text-4xl font-bold text-gray-900">₦{totalContributed.toLocaleString()}</h2>
             </div>
             <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${userPackage.gradient} flex items-center justify-center shadow-lg ${userPackage.shadowColor}`}>
@@ -472,8 +472,8 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
           {/* Monthly Progress Grid */}
           <div className="mb-4">
              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-semibold text-gray-700">Monthly Progress</span>
-                <span className="text-xs font-bold text-purple-700">{confirmedContributions}/{REQUIRED_CONTRIBUTIONS} Paid</span>
+                <span className="text-xs font-semibold text-gray-700">Payment Progress</span>
+                <span className="text-xs font-bold text-purple-700">{confirmedContributions}/{REQUIRED_CONTRIBUTIONS} Installments Paid</span>
              </div>
               <div className="grid grid-cols-6 gap-2 sm:gap-3">
                  {Array.from({ length: 12 }, (_, i) => i + 1).map((monthIndex) => {
@@ -507,7 +507,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
           <p className="text-xs text-gray-500 font-medium mb-3">
              {isCompleted 
                 ? 'All monthly contributions completed!' 
-                : `${Math.max(0, REQUIRED_CONTRIBUTIONS - confirmedContributions)} months remaining`
+                : `${Math.max(0, REQUIRED_CONTRIBUTIONS - confirmedContributions)} installments remaining`
              }
           </p>
 
@@ -525,7 +525,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
             className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 hover:border-indigo-300 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
           >
             <Receipt className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
-            <span className="font-semibold text-indigo-700">View Transactions</span>
+            <span className="font-semibold text-indigo-700">View Payment History</span>
             <ChevronRight className="w-4 h-4 text-indigo-600" />
           </button>
         </Card>
@@ -572,7 +572,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
             <div className="flex-1">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">{isCompleted ? 'Contributions Completed' : 'Next Contribution'}</h3>
+                  <h3 className="font-semibold text-gray-900 mb-1">{isCompleted ? 'Installments Completed' : 'Next Installment'}</h3>
                   <p className="text-sm text-gray-600">
                       {isCompleted 
                       ? 'You have completed all your contributions!' 
@@ -697,7 +697,7 @@ export function Dashboard({ onNavigate, userName, onLogout, userStatus = 'active
           onClick={() => onNavigate('contribute')}
           disabled={isCompleted}
         >
-          {isCompleted ? 'All Contributions Paid' : 'Make Contribution'}
+          {isCompleted ? 'All Payments Made' : 'Make Payment'}
         </GradientButton>
       </div>
 
