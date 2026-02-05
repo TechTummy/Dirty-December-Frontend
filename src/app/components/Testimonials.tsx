@@ -18,7 +18,7 @@ const testimonials: Testimonial[] = [
     name: "Motunrayo",
     year: 2023,
     quote: "I join Detty December since 2023 when I was in Benue state, someone posted the link then I join with faith. The first year my package was sent to my mom she snap what she received to me I never expect such kind of plenty food I thought you won't be able to deliver but you convinced me with your accountability kudos to you ma’am... people that joined through me never regret joining too we looking forward to many years of Detty December with you. Thank God na this same Akure we Dey forever is the deal.",
-    savings: "Package Value Verified",
+    savings: "Package Delivered as Described",
     avatar: "MO",
     location: "Akure (Formerly Benue)"
   },
@@ -27,7 +27,7 @@ const testimonials: Testimonial[] = [
     name: "Pretty Tarhi Tina",
     year: 2023,
     quote: "For the past 3 years, i have never had any time to worry about buying Rice and other food stuffs or going to the market during Christmas! I always have foodstuffs to give my daughter whenever she is going back to school! Belleza Detty December has always come to my Rescue. I'm so glad i joined this Group! No regrets at all.",
-    savings: "Consistent Saver (3 Years)",
+    savings: "Consistent Subscriber (3 Years)",
     avatar: "PT",
     location: "Oba-ile Akure"
   },
@@ -45,7 +45,7 @@ const testimonials: Testimonial[] = [
     name: "Mary",
     year: 2019,
     quote: "I have been doing this with belleza for 5 years now even when we started with 3k from 3k to 4k and now 5k and have even recommended the detty December group to more than 6 people and it has truly been an amazing experience... This platform has helped us give consistently and make real impact. I encourage more people to join and be part of this good work.",
-    savings: "5-Year Member",
+    savings: "5-Year Customer",
     avatar: "MA",
     location: "Akure"
   }
@@ -93,8 +93,8 @@ export function Testimonials() {
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Success Stories</h2>
-          <p className="text-sm text-gray-500">Hear from our community</p>
+          <h2 className="text-lg font-bold text-gray-900">Customer Experiences</h2>
+          <p className="text-sm text-gray-500">Hear from our customers</p>
         </div>
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -137,7 +137,7 @@ export function Testimonials() {
               </p>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <span className="text-sm text-gray-500 font-medium">Membership Highlight</span>
+                <span className="text-sm text-gray-500 font-medium">Customer Highlight</span>
                 <span className="text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                   {testimonial.savings}
                 </span>

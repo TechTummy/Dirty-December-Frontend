@@ -74,11 +74,10 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
             </span>
           </h1>
           <p className="text-xl text-gray-900 mb-3 font-medium mt-8">
-            Smart Savings, Better Value
+            Prepaid Packages. Better Value
           </p>
           <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">
-            Contribute monthly and receive bulk-purchased provisions in December
-          </p>
+Pay in flexible installments toward prepaid provision packages delivered in December          </p>
         </div>
 
         {/* Video Testimonials Section */}
@@ -212,7 +211,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
         </div>
 
         {/* Features */}
-        <div className="space-y-3 mb-36 mt-8">
+        <div className="space-y-3 mb-8 mt-8">
           <Card className="flex items-start gap-4 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/30">
               <Shield className="w-6 h-6 text-white" />
@@ -230,9 +229,9 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 pt-1">
-              <h3 className="font-semibold text-gray-900 mb-1">Maximum Savings</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">Maximum Value</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Bulk purchasing power means 30%+ more value for your money
+                Bulk purchasing power means more value for your prepaid package
               </p>
             </div>
           </Card>
@@ -242,12 +241,19 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
               <Clock className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 pt-1">
-              <h3 className="font-semibold text-gray-900 mb-1">Flexible Payments</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">Flexible Installments</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Choose your plan and pay monthly via simple bank transfer
+                Choose a package and pay in installments toward your prepaid order
               </p>
             </div>
           </Card>
+        </div>
+
+        {/* Disclaimer */}
+        <div className="text-center px-6 pb-40">
+          <p className="text-[10px] text-gray-400 leading-relaxed max-w-sm mx-auto">
+            Payments made on Belleza World are installment payments toward prepaid product packages. This is not a savings, investment, or cooperative platform
+          </p>
         </div>
       </div>
 
@@ -272,7 +278,7 @@ export function Landing({ onGetStarted, onSignIn, onAdminAccess }: LandingProps)
           </GradientButton>
         </div>
         <p className="text-center text-xs text-gray-500 mt-3">
-          Join today and start your savings journey
+          Reserve your December provision package
         </p>
       </div>
 

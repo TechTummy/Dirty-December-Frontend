@@ -226,8 +226,8 @@ export function VideoTestimonials() {
   return (
     <div className="mb-8">
       <div className="text-center mb-8">
-        <h2 className="font-bold text-gray-900 mb-1 text-3xl">Our Stories</h2>
-        <p className="text-gray-600 text-lg">See the joy we bring to our community</p>
+        <h2 className="font-bold text-gray-900 mb-1 text-3xl">Customer Stories</h2>
+        <p className="text-gray-600 text-lg">See how our customers enjoy stress-free December packages</p>
       </div>
 
       {/* Video Carousel */}
