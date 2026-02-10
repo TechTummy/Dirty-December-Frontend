@@ -38,9 +38,9 @@ export function UsersManagement() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPackage, setFilterPackage] = useState('all');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<'paid' | 'unpaid' | 'all'>('paid');
   const [filterPaymentMonth, setFilterPaymentMonth] = useState('all');
   const [filterPaymentYear, setFilterPaymentYear] = useState('all');
-  const [filterCompletedPayments, setFilterCompletedPayments] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
@@ -70,20 +70,39 @@ export function UsersManagement() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments, debouncedSearchTerm]);
+  }, [filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterPaymentStatus, debouncedSearchTerm]);
 
   const { data: usersData, isLoading, refetch } = useQuery({
-    queryKey: ['adminUsers', page, perPage, filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments, debouncedSearchTerm],
-    queryFn: () => admin.getUsers({ 
-      page, 
-      per_page: perPage,
-      status: filterStatus !== 'all' ? filterStatus : undefined,
-      package_id: filterPackage !== 'all' ? filterPackage : undefined,
-      payment_month: filterPaymentMonth !== 'all' ? Number(filterPaymentMonth) : undefined,
-      payment_year: filterPaymentYear !== 'all' ? Number(filterPaymentYear) : undefined,
-      completed_payments: filterCompletedPayments ? true : undefined,
-      search: debouncedSearchTerm || undefined
-    }),
+    queryKey: ['adminUsers', page, perPage, filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterPaymentStatus, debouncedSearchTerm],
+    queryFn: () => {
+        // Construct filter params dynamically based on payment status
+        const params: any = { 
+            page, 
+            per_page: perPage,
+            status: filterStatus !== 'all' ? filterStatus : undefined,
+            package_id: filterPackage !== 'all' ? filterPackage : undefined,
+            search: debouncedSearchTerm || undefined
+        };
+
+        if (filterPaymentStatus === 'paid') {
+            // For Paid, we filter by payment_month/year
+            // If month is 'all', it might show all paid users (if backend supports just checking year or completed payments flag?)
+            // But user specifically mentioned selecting a month.
+            // If month is set, we send it.
+            if (filterPaymentMonth !== 'all') params.payment_month = Number(filterPaymentMonth);
+            if (filterPaymentYear !== 'all') params.payment_year = Number(filterPaymentYear);
+            // Removed completed_payments=true as user reported it breaks the results
+        } else if (filterPaymentStatus === 'unpaid') {
+            if (filterPaymentMonth !== 'all') params.unpaid_month = Number(filterPaymentMonth);
+            if (filterPaymentYear !== 'all') params.unpaid_year = Number(filterPaymentYear);
+        } else {
+             // 'all' = All Users (no payment status filter)
+             // We generally ignore payment_month here unless we want to allow loosely filtering, 
+             // but cleaner to keep 'all' as truly ALL.
+        }
+
+        return admin.getUsers(params);
+    },
   });
 
   const { data: packagesData } = useQuery({
@@ -373,8 +392,23 @@ export function UsersManagement() {
               </div>
             </div>
 
+            {/* Payment Status Filter */}
+            <div className="w-full lg:w-40">
+               <div className="relative">
+                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                 <select
+                   value={filterPaymentStatus}
+                   onChange={(e) => setFilterPaymentStatus(e.target.value as any)}
+                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer"
+                 >
+                   <option value="paid">Paid</option>
+                   <option value="unpaid">Unpaid</option>
+                 </select>
+               </div>
+            </div>
+
             {/* Payment Month Filter */}
-            <div className="w-full lg:w-48">
+            <div className="w-full lg:w-40">
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <select
@@ -393,7 +427,7 @@ export function UsersManagement() {
             </div>
 
             {/* Payment Year Filter */}
-            <div className="w-full lg:w-48">
+            <div className="w-full lg:w-32">
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <select
@@ -409,20 +443,6 @@ export function UsersManagement() {
                   ))}
                 </select>
               </div>
-            </div>
-
-            {/* Completed Payments Toggle */}
-            <div className="flex items-center gap-2">
-              <input 
-                type="checkbox" 
-                id="completedPayments"
-                checked={filterCompletedPayments}
-                onChange={(e) => setFilterCompletedPayments(e.target.checked)}
-                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-              />
-              <label htmlFor="completedPayments" className="text-sm font-medium text-gray-700">
-                Completed Payments Only
-              </label>
             </div>
             
           </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, Users, Package, Megaphone, Menu, X, LogOut, Calendar, Truck } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Megaphone, Menu, X, LogOut, Calendar, Truck, TrendingUp } from 'lucide-react';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { DashboardOverview } from './views/DashboardOverview';
 import { UsersManagement } from './views/UsersManagement';
@@ -10,6 +10,8 @@ import { PackageDetailsView } from './views/PackageDetailsView';
 import { ContributionsView } from './views/ContributionsView';
 import { Reserved2027 } from './views/Reserved2027';
 
+import { MonthlyBreakdownView } from './views/MonthlyBreakdownView';
+
 interface AdminDashboardProps {
   onLogout: () => void;
 }
@@ -18,6 +20,7 @@ const navItems = [
   { id: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { id: '/admin/dashboard/users', label: 'Users', icon: Users },
   { id: '/admin/dashboard/reserved2027', label: `Reserved for ${new Date().getFullYear() + 1}`, icon: Calendar },
+  { id: '/admin/dashboard/monthly-breakdown', label: 'Monthly Breakdown', icon: TrendingUp },
   { id: '/admin/dashboard/packages', label: 'Packages', icon: Package },
   { id: '/admin/dashboard/delivery', label: 'Delivery', icon: Truck },
   { id: '/admin/dashboard/announcements', label: 'Announcements', icon: Megaphone },
@@ -202,6 +205,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             <Route path="delivery" element={<DeliveryManagement />} />
             <Route path="announcements" element={<AnnouncementsManagement />} />
             <Route path="reserved2027" element={<Reserved2027 />} />
+            <Route path="monthly-breakdown" element={<MonthlyBreakdownView />} />
             
             {/* Dynamic Routes for Details */}
             <Route path="packages/:packageId" element={<PackageRouterWrapper />} />

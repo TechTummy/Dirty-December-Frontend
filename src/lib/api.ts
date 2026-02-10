@@ -31,7 +31,22 @@ export interface PackageStats {
     avg_months_paid: number;
     progress_percentage: number;
     confirmed_transaction_count: number;
+
     declined_transaction_count: number;
+}
+
+export interface MonthlyBreakdown {
+    year: number;
+    breakdown: {
+        month: string;
+        month_number: number;
+        total_collected: number;
+        expected_total: number;
+        balance: number;
+        progress_percentage: number;
+        defaulted_users_count: number;
+        expected_users_count: number;
+    }[];
 }
 
 export interface Package {
@@ -170,6 +185,8 @@ export const admin = {
         status?: string;
         payment_month?: number;
         payment_year?: number;
+        unpaid_month?: number;
+        unpaid_year?: number;
         completed_payments?: boolean;
         search?: string;
     }) => {
@@ -270,6 +287,10 @@ export const admin = {
     },
     getDeliveryTransactions: async (params?: { page?: number; status?: string }) => {
         const response = await adminApi.get('/api/v1/admin/transactions/delivery', { params });
+        return response.data;
+    },
+    getMonthlyBreakdown: async (year?: number) => {
+        const response = await adminApi.get('/api/v1/admin/transactions/monthly-breakdown', { params: { year } });
         return response.data;
     },
 };
