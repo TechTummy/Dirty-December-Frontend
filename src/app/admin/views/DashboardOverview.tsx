@@ -39,7 +39,9 @@ export function DashboardOverview({ onPackageClick }: DashboardOverviewProps) {
   const recentContributions = stats.recent_contributions || [];
   
   // Use packages from the packages endpoint as it contains the stats
-  const rawPackages = packagesData?.data || [];
+  const rawPackages = Array.isArray(packagesData?.data) 
+    ? packagesData.data 
+    : (packagesData?.data?.data && Array.isArray(packagesData.data.data) ? packagesData.data.data : []);
   
   // Transform user counts array from dashboard stats if needed, 
   // but preferably use stats.total_users from package data if available

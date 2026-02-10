@@ -109,6 +109,9 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   
   const avgMonthsContributed = stats.avg_months_paid ?? 0;
   const completionRate = stats.progress_percentage ?? 0;
+  
+  const confirmedTransactions = stats.confirmed_transaction_count ?? 0;
+  const declinedTransactions = stats.declined_transaction_count ?? 0;
 
   // Filter logic - Applied to CURRENT PAGE only
   // Filter logic - Applied to CURRENT PAGE only
@@ -186,7 +189,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
       </div>
 
       {/* Overview Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="border-0 shadow-lg">
           <div className="flex items-start justify-between mb-4">
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${displayPackage.gradient} flex items-center justify-center shadow-lg ${displayPackage.shadowColor}`}>
@@ -228,6 +231,20 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
           <h3 className="text-2xl font-bold text-gray-900 mb-1">{avgMonthsContributed.toFixed(1)}/12</h3>
           <p className="text-sm text-gray-500">Avg. Months</p>
           <p className="text-xs text-gray-600 mt-1">{completionRate.toFixed(0)}% complete</p>
+        </Card>
+
+        <Card className="border-0 shadow-lg">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Receipt className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-1">{confirmedTransactions}</h3>
+          <p className="text-sm text-gray-500">Transactions</p>
+          <div className="flex items-center gap-2 mt-1">
+             <span className="text-xs text-emerald-600 font-medium">{confirmedTransactions} confirmed</span>
+             <span className="text-xs text-red-500 font-medium">{declinedTransactions} declined</span>
+          </div>
         </Card>
       </div>
 

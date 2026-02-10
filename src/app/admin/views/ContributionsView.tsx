@@ -40,6 +40,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'contributions' | 'delivery'>('contributions');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
@@ -49,14 +50,23 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   // ... (keeping existing query hooks) ...
   // Fetch Transactions (Contributions)
   // Fetch Transactions (Contributions)
+    // Debounce Search Term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const { data: transactionsData, isLoading: isLoadingTransactions } = useQuery({
-    queryKey: ['admin-transactions', packageId, page, perPage, filterStatus, searchTerm],
+    queryKey: ['admin-transactions', packageId, page, perPage, filterStatus, searchTerm, debouncedSearchTerm],
     queryFn: () => admin.getTransactions({ 
       package_id: packageId, 
       page,
       per_page: perPage,
       status: filterStatus !== 'all' ? filterStatus : undefined,
-      search: searchTerm || undefined
+      search: debouncedSearchTerm || undefined
     }),
     enabled: activeTab === 'contributions'
   });
@@ -99,7 +109,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [filterStatus, searchTerm]);
+  }, [filterStatus, debouncedSearchTerm]);
 
   // Derived state from API data
   const rawContributions = transactionsData?.data?.data || transactionsData?.data || [];
@@ -146,6 +156,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   })) : [];
 
   const currentList = activeTab === 'contributions' ? contributions : deliveries;
+  const isLoading = activeTab === 'contributions' ? isLoadingTransactions : isLoadingDelivery;
 
   // Fetch Package Details
   const { data: packageApiResponse, isLoading: isLoadingPackage } = useQuery({
@@ -192,7 +203,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
   const stats = {
     total: packageStats.total_submissions ?? (transactionsData?.data?.total || currentList.length),
     pending: packageStats.pending_reviews ?? currentList.filter(c => c.status === 'pending').length,
-    confirmed: '***',
+    confirmed: packageStats.confirmed_transaction_count ?? currentList.filter(c => c.status === 'confirmed').length,
+    declined: packageStats.declined_transaction_count ?? currentList.filter(c => c.status === 'declined').length,
     confirmedAmount: packageStats.confirmed_amount ?? currentList.filter(c => c.status === 'confirmed').reduce((sum, c) => sum + c.amount, 0),
     // Additional helpful stats we can use later?
     confirmedUsers: packageStats.confirmed_users ?? 0
@@ -314,13 +326,13 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       </div>
 
       {isLoadingTransactions || isLoadingDelivery ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 animate-pulse">
            {[...Array(4)].map((_, i) => (
              <div key={i} className="h-32 bg-slate-200 rounded-2xl"></div>
            ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="border-0 shadow-lg">
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -349,6 +361,16 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
             </div>
             <h3 className="text-2xl font-bold text-emerald-600 mb-1">{stats.confirmed}</h3>
             <p className="text-sm text-gray-500">Confirmed</p>
+          </Card>
+
+          <Card className="border-0 shadow-lg">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/30">
+                <XCircle className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-red-600 mb-1">{stats.declined}</h3>
+            <p className="text-sm text-gray-500">Declined</p>
           </Card>
 
           <Card className="border-0 shadow-lg">
@@ -407,7 +429,24 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
 
         {/* Mobile: Stacked cards */}
         <div className="lg:hidden space-y-3 mb-6">
-          {filteredContributions.map((contribution) => (
+          {isLoading && (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 bg-slate-50 rounded-xl border border-gray-200 animate-pulse">
+                <div className="flex justify-between mb-3">
+                  <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))
+          )}
+          {!isLoading && (
+
+            filteredContributions.map((contribution) => (
             <div key={contribution.id} className="p-4 bg-slate-50 rounded-xl border border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -487,7 +526,8 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                 )}
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         {/* Desktop: Full table */}
@@ -514,7 +554,30 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
               </tr>
             </thead>
             <tbody>
-              {filteredContributions.map((contribution) => (
+              {isLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="border-b border-gray-100 animate-pulse">
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
+                    {activeTab === 'contributions' && (
+                      <>
+                        <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                        <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                      </>
+                    )}
+                    {activeTab === 'delivery' && (
+                       <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    )}
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-28"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="py-4 px-4"><div className="h-8 bg-gray-200 rounded w-20"></div></td>
+                  </tr>
+                ))
+              ) : null}
+              {!isLoading ? (
+                filteredContributions.map((contribution) => (
                 <tr key={contribution.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
                   <td className="py-4 px-4">
                     <div>
@@ -604,11 +667,12 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              ) : null}
             </tbody>
           </table>
 
-          {filteredContributions.length === 0 && (
+          {!isLoading && filteredContributions.length === 0 && (
             <div className="text-center py-12">
               <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No contributions found</p>
@@ -618,7 +682,7 @@ export function ContributionsView({ packageId, onBack }: ContributionsViewProps)
       </Card>
 
       {/* Pagination Controls */}
-      {activeTab === 'contributions' && transactionsData?.data?.current_page && (
+      {!isLoading && activeTab === 'contributions' && transactionsData?.data?.current_page && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
           <div className="flex items-center gap-4">
             <p className="text-sm text-gray-500">

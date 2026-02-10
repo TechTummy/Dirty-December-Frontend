@@ -30,6 +30,8 @@ export interface PackageStats {
     expected_total: number;
     avg_months_paid: number;
     progress_percentage: number;
+    confirmed_transaction_count: number;
+    declined_transaction_count: number;
 }
 
 export interface Package {
@@ -169,6 +171,7 @@ export const admin = {
         payment_month?: number;
         payment_year?: number;
         completed_payments?: boolean;
+        search?: string;
     }) => {
         const response = await adminApi.get('/api/v1/admin/users', { params });
         return response.data;
