@@ -35,6 +35,7 @@ interface User {
 
 export function UsersManagement() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPackage, setFilterPackage] = useState('all');
   const [filterPaymentMonth, setFilterPaymentMonth] = useState('all');
@@ -55,15 +56,24 @@ export function UsersManagement() {
   
   // Pagination State
   const [page, setPage] = useState(1);
+  // Debounce Search Term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [perPage, setPerPage] = useState(15);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments, searchTerm]);
+  }, [filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments, debouncedSearchTerm]);
 
   const { data: usersData, isLoading, refetch } = useQuery({
-    queryKey: ['adminUsers', page, perPage, filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments],
+    queryKey: ['adminUsers', page, perPage, filterStatus, filterPackage, filterPaymentMonth, filterPaymentYear, filterCompletedPayments, debouncedSearchTerm],
     queryFn: () => admin.getUsers({ 
       page, 
       per_page: perPage,
@@ -71,7 +81,8 @@ export function UsersManagement() {
       package_id: filterPackage !== 'all' ? filterPackage : undefined,
       payment_month: filterPaymentMonth !== 'all' ? Number(filterPaymentMonth) : undefined,
       payment_year: filterPaymentYear !== 'all' ? Number(filterPaymentYear) : undefined,
-      completed_payments: filterCompletedPayments ? true : undefined
+      completed_payments: filterCompletedPayments ? true : undefined,
+      search: debouncedSearchTerm || undefined
     }),
   });
 
@@ -260,20 +271,9 @@ export function UsersManagement() {
   };
 
   // Filter users
-  // Filter users
-  // Note: Status and Package are filtered Server-Side now.
-  // We only filter by Search Term locally (until API supports search)
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = searchTerm === '' || 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Status and Package are handled by API, so we don't filter them here to avoid double-filtering issues.
-    // E.g. If API returns "Reserved" users, we just display them.
-    
-    return matchesSearch;
-  });
+  // Note: All filtering is now done Server-Side via API params (status, package, search, etc.)
+  // We simply display the returned users directly.
+  const filteredUsers = users;
 
   const handleAddUser = () => {
     setFormData({
@@ -326,13 +326,7 @@ export function UsersManagement() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -484,7 +478,28 @@ export function UsersManagement() {
       <Card className="border-0 shadow-lg overflow-hidden">
         {/* Mobile: Stacked table cards */}
         <div className="lg:hidden space-y-4 p-4 bg-slate-50/50">
-          {filteredUsers.map((user) => (
+          {isLoading && (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="p-5 bg-white rounded-xl border border-gray-100 shadow-sm animate-pulse">
+                <div className="flex justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gray-200"></div>
+                    <div>
+                      <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-24"></div>
+                    </div>
+                  </div>
+                  <div className="h-6 bg-gray-200 rounded w-20"></div>
+                </div>
+                <div className="space-y-3 mb-4">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))
+          )}
+          {!isLoading && filteredUsers.map((user) => (
             <div key={user.id} className="p-5 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -571,7 +586,32 @@ export function UsersManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+              {isLoading && (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gray-200"></div>
+                        <div>
+                          <div className="h-4 bg-gray-200 rounded w-32 mb-1"></div>
+                          <div className="h-3 bg-gray-200 rounded w-20"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
+                      <div className="h-3 bg-gray-200 rounded w-32"></div>
+                    </td>
+                    <td className="px-6 py-4"><div className="h-6 bg-gray-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4"><div className="h-6 bg-gray-200 rounded w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4"><div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div></td>
+                  </tr>
+                ))
+              )}
+              {!isLoading && filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -658,7 +698,7 @@ export function UsersManagement() {
       </Card>
 
       {/* Empty State */}
-      {filteredUsers.length === 0 && (
+      {!isLoading && filteredUsers.length === 0 && (
         <Card className="border-0 shadow-md text-center py-12">
           <div className="text-gray-400 mb-4">
             <Search className="w-12 h-12 mx-auto" />
