@@ -12,6 +12,17 @@ interface PackageDetailsViewProps {
 
 export function PackageDetailsView({ packageId, onBack, onViewContributions }: PackageDetailsViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Debounce Search Term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDelivery, setFilterDelivery] = useState('all');
   const [page, setPage] = useState(1);
@@ -19,7 +30,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [filterStatus, filterDelivery, searchTerm]);
+  }, [filterStatus, filterDelivery, debouncedSearchTerm]);
   const [selectedUserAddress, setSelectedUserAddress] = useState<any | null>(null);
   const [viewingUser, setViewingUser] = useState<any | null>(null);
 
@@ -33,19 +44,20 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
 
   // Fetch users for this package
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['admin-users', packageId, page, perPage, filterStatus],
+    queryKey: ['admin-users', packageId, page, perPage, filterStatus, debouncedSearchTerm],
     queryFn: () => admin.getUsers({ 
       page, 
       per_page: perPage, 
       package_id: packageId,
-      status: filterStatus !== 'all' ? filterStatus : undefined
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+      search: debouncedSearchTerm || undefined
     }),
   });
 
   // Fetch transactions for this package to calculate totals - REMOVED (Using API Stats)
   // const { data: transactionsData } = useQuery({ ... });
 
-  if (isLoadingPackage || isLoadingUsers) {
+  if (isLoadingPackage) {
     return (
       <div className="flex bg-slate-50 min-h-screen items-center justify-center">
          <Loader className="w-8 h-8 animate-spin text-purple-600" />
@@ -73,8 +85,13 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
     description: packageData.description
   };
 
+  // Handle API response structure difference between list and object
+  const rawUsersList = Array.isArray(usersData?.data?.data) 
+    ? usersData.data.data 
+    : (Array.isArray(usersData?.data) ? usersData.data : []);
+
   // Filter users for this package
-  const usersList = (usersData?.data?.data || []).map((u: any) => ({
+  const usersList = rawUsersList.map((u: any) => ({
     id: u.id,
     name: u.name,
     phone: u.phone,
@@ -88,7 +105,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
       : 0,
     totalPaid: Number(u.total_contribution || 0),
     joinedDate: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-    deliveryMethod: u.delivery_detail ? 'delivery' : 'pickup',
+    deliveryMethod: (u.delivery_detail?.type === 'delivery' || u.delivery_method === 'delivery') ? 'delivery' : 'pickup',
     deliveryAddress: u.delivery_detail ? {
       address: u.delivery_detail.street_address,
       city: u.delivery_detail.city || u.delivery_detail.lga || '',
@@ -113,16 +130,13 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
   const confirmedTransactions = stats.confirmed_transaction_count ?? 0;
   const declinedTransactions = stats.declined_transaction_count ?? 0;
 
-  // Filter logic - Applied to CURRENT PAGE only
-  // Filter logic - Applied to CURRENT PAGE only
-  // Note: Status is filtered Server-Side now.
+  // Filter logic - Now entirely Server-Side
+  // We apply client-side filtering only for fields NOT supported by API (like Delivery Method if API doesn't support it yet)
   const filteredUsers = usersList.filter((user: any) => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    // Status is handled by API
+    // Search is server-side
+    // Status is server-side
     const matchesDelivery = filterDelivery === 'all' || user.deliveryMethod === filterDelivery;
-    return matchesSearch && matchesDelivery;
+    return matchesDelivery;
   });
 
   const getStatusBadge = (status: string) => {
@@ -317,7 +331,24 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
         {/* Table */}
         {/* Mobile: Stacked cards */}
         <div className="lg:hidden space-y-3 mb-6">
-          {filteredUsers.map((user: any) => (
+          {isLoadingUsers ? (
+             [...Array(3)].map((_, i) => (
+                <div key={i} className="p-4 bg-slate-50 rounded-xl border border-gray-200 animate-pulse">
+                  <div className="flex justify-between mb-3">
+                    <div>
+                      <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
+                      <div className="h-3 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div className="h-5 bg-gray-200 rounded w-16"></div>
+                  </div>
+                  <div className="space-y-2 mb-3">
+                    <div className="h-3 bg-gray-200 rounded w-full"></div>
+                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                </div>
+             ))
+          ) : (
+            filteredUsers.map((user: any) => (
             <div key={user.id} className="p-4 bg-slate-50 rounded-xl border border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -376,10 +407,11 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                 </button>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
-        {/* Desktop: Full table */}
+            {/* Desktop: Full table */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -395,7 +427,21 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user: any) => (
+              {isLoadingUsers ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="animate-pulse border-b border-gray-100">
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-40"></div></td>
+                    <td className="py-4 px-4"><div className="h-6 bg-gray-200 rounded w-24"></div></td>
+                    <td className="py-4 px-4"><div className="h-6 bg-gray-200 rounded w-20"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    <td className="py-4 px-4"><div className="h-8 bg-gray-200 rounded w-16"></div></td>
+                  </tr>
+                ))
+              ) : (
+                filteredUsers.map((user: any) => (
                 <tr key={user.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
                   <td className="py-4 px-4">
                     <div>
@@ -461,7 +507,8 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
 
@@ -497,7 +544,7 @@ export function PackageDetailsView({ packageId, onBack, onViewContributions }: P
       </Card>
 
       {/* Pagination Controls */}
-      {usersData?.data?.current_page && (
+      {usersData?.data && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
                <p className="text-sm text-gray-500">
